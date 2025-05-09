@@ -7,6 +7,7 @@ const otpRoutes = require('./routes/otpRoutes');
 const otpmobileRoutes = require('./routes/otpmobileroute');
 const userDetailRoutes = require('./routes/userdetailRoutes');
 const uploadSkillController = require('./controllers/userSkillController');
+const jobpostRoute = require('./routes/jobpostroute');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,10 +18,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/otp', otpRoutes);  
 app.use('/api/mobileotp',otpmobileRoutes);   
 app.use('/api/user-details', userDetailRoutes);
-// Set up multer for handling image uploads
-const upload = multer({ dest: 'uploads/' });
+app.use('/', jobpostRoute);
 
-// Define the route for uploading skills and call the controller function
+
+
+const upload = multer({ dest: 'uploads/' });
 app.post('/upload-skill', upload.single('certificate'), uploadSkillController);
 
 (async () => {

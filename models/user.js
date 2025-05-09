@@ -60,8 +60,7 @@ module.exports = (sequelize) => {
       onDelete: 'CASCADE',
     });
 
-    
-   
+      User.hasMany(models.JobPost, { foreignKey: 'userId' });
   };
 
   return User;

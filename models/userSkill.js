@@ -17,6 +17,10 @@ module.exports = (sequelize, DataTypes) => {
     certificate_image: {
       type: DataTypes.BLOB('long'),
     },
+    skill: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     authority: {
       type: DataTypes.STRING,
       allowNull: false,
