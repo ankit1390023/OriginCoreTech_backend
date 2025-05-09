@@ -13,16 +13,15 @@ const uploadSkillController = async (req, res) => {
     
 let userId = parseInt(user_id);
 let skillId = parseInt(skill_id);
-console.log(typeof(userId)+" user id is : "+ userId)
-console.log(typeof(userId)+" user id is : "+ skillId)
-const id = 2;
-    // Save data into the database using Sequelize
+
+
     await UserSkill.create({
-      userId,
-      id,
-      authority,
+      userId: user_id, 
+      skill_id: skill_id, 
+      authority: authority,
       certificate_image: imageData
     });
+    
 
     // Delete the temporary file
     fs.unlinkSync(req.file.path);

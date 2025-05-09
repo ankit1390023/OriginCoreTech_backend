@@ -54,6 +54,11 @@ module.exports = (sequelize) => {
       foreignKey: 'userId',
       onDelete: 'CASCADE'
     });
+    User.hasMany(models.UserSkill, {
+      foreignKey: 'userId', 
+      sourceKey: 'id', 
+      onDelete: 'CASCADE',
+    });
 
     
    

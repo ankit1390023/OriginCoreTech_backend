@@ -1,10 +1,9 @@
 const { DataTypes } = require('sequelize');
-
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   const UserSkill = sequelize.define('UserSkill', {
     userId: {
       type: DataTypes.INTEGER,
-
+      allowNull: false,
       references: {
         model: 'Users',
         key: 'id',
@@ -13,8 +12,7 @@ module.exports = (sequelize) => {
     },
     skill_id: {
       type: DataTypes.INTEGER,
-      
-  
+      allowNull: false,
     },
     certificate_image: {
       type: DataTypes.BLOB('long'),
@@ -30,13 +28,15 @@ module.exports = (sequelize) => {
     updatedAt: false
   });
 
-  // Association
-  // UserSkill.associate = function (models) {
-  //   UserSkill.belongsTo(models.User, {
-  //     foreignKey: 'userId',
-  //     onDelete: 'CASCADE',
-  //   });
-  // };
+  // Define associations
+  UserSkill.associate = function (models) {
+    UserSkill.belongsTo(models.User, {
+      foreignKey: 'userId',  // This refers to the userId in the UserSkill table
+      targetKey: 'id', // This is the primary key in the User table
+      onDelete: 'CASCADE',
+    });
+  };
+  
 
   return UserSkill;
 };

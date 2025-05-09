@@ -11,8 +11,8 @@ const UserSkill = UserSkillModel(sequelize, DataTypes);
 
 
 // Setup associations
-if (User.associate) User.associate({ UserDetail });
-if (UserDetail.associate) UserDetail.associate({ User, UserSkill });
+if (User.associate) User.associate({ UserDetail, UserSkill });
+if (UserDetail.associate) UserDetail.associate({ User});
  if (UserSkill.associate) UserSkill.associate({ User });
 
 module.exports = {
