@@ -8,6 +8,7 @@ const otpmobileRoutes = require('./routes/otpmobileroute');
 const userDetailRoutes = require('./routes/userdetailRoutes');
 const uploadSkillController = require('./controllers/userSkillController');
 const jobpostRoute = require('./routes/jobpostroute');
+const companyRecruiterProfileRoutes = require('./routes/companyRecruiterProfileRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,12 +19,14 @@ app.use('/api/users', userRoutes);
 app.use('/api/otp', otpRoutes);  
 app.use('/api/mobileotp',otpmobileRoutes);   
 app.use('/api/user-details', userDetailRoutes);
+app.use('/api/company-recruiter', companyRecruiterProfileRoutes);
 app.use('/', jobpostRoute);
 
 
 
 const upload = multer({ dest: 'uploads/' });
-app.post('/upload-skill', upload.single('certificate'), uploadSkillController);
+app.post('/upload-skill', upload.any(), uploadSkillController);
+
 
 (async () => {
   try {

@@ -1,35 +1,43 @@
 const fs = require('fs');
-
 const { UserSkill } = require('../models');
-
 
 const uploadSkillController = async (req, res) => {
   try {
-    
-    
-    const { user_id, skill_id,skill, authority } = req.body;
-    const imageData = fs.readFileSync(req.file.path); 
-    console.log(typeof(user_id))
-    
-let userId = parseInt(user_id);
-let skillId = parseInt(skill_id);
+    console.log(req.body)
+    console.log(req.files)
+    const { user_id } = req.body;
+    const skills = JSON.parse(req.body.skills); 
 
 
-    await UserSkill.create({
-      userId: user_id, 
-      skill_id: skill_id, 
-      skill:skill,
-      authority: authority,
-      certificate_image: imageData
-    });
-    
+    for (let i = 0; i < skills.length; i++) {
+  const skillItem = skills[i];
+  const fileKey = `certificate_image_${i}`;
 
-    fs.unlinkSync(req.file.path);
+  const imageFile = req.files.find(file => file.fieldname === fileKey);
 
-    res.status(200).json({ message: 'Skill uploaded successfully!' });
+  if (!imageFile) {
+    console.warn(`No certificate image found for skill at index ${i}`);
+    continue;
+  }
+
+  const imageData = fs.readFileSync(imageFile.path);
+
+  await UserSkill.create({
+    userId: parseInt(user_id),
+    skill_id: parseInt(skillItem.skill_id),
+    skill: skillItem.skill,
+    authority: skillItem.authority,
+    certificate_image: imageData
+  });
+
+  fs.unlinkSync(imageFile.path); 
+}
+
+
+    res.status(200).json({ message: 'Skills uploaded successfully!' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error uploading skill' });
+    console.error('Upload error:', error);
+    res.status(500).json({ error: 'Error uploading skills' });
   }
 };
 

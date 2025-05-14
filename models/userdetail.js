@@ -1,4 +1,3 @@
-// models/UserDetail.js
 module.exports = (sequelize, DataTypes) => {
 
 
@@ -22,6 +21,20 @@ module.exports = (sequelize, DataTypes) => {
     },
     phone: { type: DataTypes.STRING, allowNull: false },
     dob: { type: DataTypes.DATEONLY, allowNull: false },
+
+    aadhaarNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
+    aadhaarCardFile: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    isAadhaarVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     
     currentLocation: { type: DataTypes.STRING },
     gender: { type: DataTypes.STRING, allowNull: false },
@@ -29,20 +42,19 @@ module.exports = (sequelize, DataTypes) => {
     userType: {
       type: DataTypes.STRING,
       allowNull: false
-      
+
     },
 
     Standard: DataTypes.STRING,
 
-    // Use string + validation instead of foreign key
     course: {
       type: DataTypes.STRING
-     
-      
+
+
     },
     specialization: {
       type: DataTypes.STRING
-      
+
     },
     college: {
       type: DataTypes.STRING
@@ -51,13 +63,50 @@ module.exports = (sequelize, DataTypes) => {
     endYear: DataTypes.STRING,
     jobLocation: { type: DataTypes.STRING },
 
-    
+
     totalExperience: DataTypes.STRING,
     currentJobRole: DataTypes.STRING,
     currentCompany: DataTypes.STRING,
     salaryDetails: DataTypes.STRING,
     currentlyLookingFor: DataTypes.STRING,
     workMode: DataTypes.STRING,
+
+    aboutus: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    careerObjective: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    resume: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    language: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    isEmailVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isPhoneVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isGstVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    userprofilepic: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    termsAndCondition: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   });
 
   UserDetail.associate = function (models) {

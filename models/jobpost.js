@@ -5,22 +5,23 @@ module.exports = (sequelize, DataTypes) => {
         autoIncrement: true,
         primaryKey: true
       },
-      userId: {
+     
+      companyRecruiterProfileId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-          model: 'Users', // Reference to the 'Users' table
-          key: 'id', // Foreign key in the 'Users' table
+          model: 'companyrecruiterprofiles',
+          key: 'id',
         },
-        onDelete: 'CASCADE', // If the user is deleted, delete their job posts as well
+        onDelete: 'CASCADE',
       },
-      opportunityType: DataTypes.STRING, // Internship, Job, Project
+      opportunityType: DataTypes.STRING, 
       jobProfile: DataTypes.STRING,
       skillsRequired: DataTypes.STRING,
       skillRequiredNote: DataTypes.STRING,
-      jobType: DataTypes.STRING, // In-office, Hybrid, Remote
+      jobType: DataTypes.STRING, 
       daysInOffice: DataTypes.INTEGER,
-      jobTime: DataTypes.STRING, // Part-time, Full-time
+      jobTime: DataTypes.STRING, 
       cityChoice: DataTypes.STRING,
       numberOfOpenings: DataTypes.INTEGER,
       jobDescription: DataTypes.TEXT,
@@ -42,10 +43,9 @@ module.exports = (sequelize, DataTypes) => {
       course: DataTypes.STRING
     });
   
-    // Associations
     JobPost.associate = (models) => {
-      // A JobPost belongs to a User
-      JobPost.belongsTo(models.User, { foreignKey: 'userId' });
+      JobPost.belongsTo(models.CompanyRecruiterProfile, { foreignKey: 'companyRecruiterProfileId' });
+      JobPost.hasMany(models.Application, { foreignKey: 'jobPostId' });
     };
   
     return JobPost;

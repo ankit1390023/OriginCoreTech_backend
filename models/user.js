@@ -24,6 +24,10 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    isDeleted: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     userRole: {
       type: DataTypes.ENUM('STUDENT', 'COMPANY', 'UNIVERSITY'),
       defaultValue: 'STUDENT',
@@ -60,7 +64,10 @@ module.exports = (sequelize) => {
       onDelete: 'CASCADE',
     });
 
-      User.hasMany(models.JobPost, { foreignKey: 'userId' });
+    User.hasMany(models.JobPost, { foreignKey: 'userId' });
+
+    // Add association to CompanyRecruiterProfile
+    User.hasOne(models.CompanyRecruiterProfile, { foreignKey: 'userId' });
   };
 
   return User;

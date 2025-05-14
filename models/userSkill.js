@@ -32,11 +32,10 @@ module.exports = (sequelize, DataTypes) => {
     updatedAt: false
   });
 
-  // Define associations
   UserSkill.associate = function (models) {
     UserSkill.belongsTo(models.User, {
-      foreignKey: 'userId',  // This refers to the userId in the UserSkill table
-      targetKey: 'id', // This is the primary key in the User table
+      foreignKey: 'userId',  
+      targetKey: 'id', 
       onDelete: 'CASCADE',
     });
   };
