@@ -1,9 +1,8 @@
 const { User, UserDetail } = require('../models'); 
 const jwt = require('jsonwebtoken');
 const config = require('../jwtConfig');
-const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
-
+const bcrypt = require('bcrypt');
 exports.registerUser = async (req, res) => {
   const { firstName, lastName, email, phone, password, userRole } = req.body;
 
@@ -23,14 +22,14 @@ exports.registerUser = async (req, res) => {
     }
 
     // Encrypt password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
+    
 
     const user = await User.create({ 
       firstName, 
       lastName, 
       email, 
       phone, 
-      password: hashedPassword, 
+      password: password, 
       userRole 
     });
 
@@ -55,7 +54,7 @@ exports.loginUser = async (req, res) => {
     }
 
     //  Compare password with hashed password in DB
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid =  bcrypt.compare(password,user.password)
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -142,12 +141,15 @@ exports.changeEmail = async (req, res) => {
 
 // Change Password API
 exports.changePassword = async (req, res) => {
-  const { userId, oldPassword, newPassword } = req.body;
+  const {oldPassword, newPassword } = req.body;
+  
 
-  if (!userId || !oldPassword || !newPassword) {
+  if (!oldPassword || !newPassword) {
     return res.status(400).json({ message: 'User ID, old password, and new password are required.' });
   }
-
+  const userId = req.user.id
+  console.log(req.body);
+  console.log(req.user)
   try {
     const user = await User.findByPk(userId);
     if (!user || user.isDeleted) {
@@ -155,19 +157,12 @@ exports.changePassword = async (req, res) => {
     }
     console.log({oldPassword})
     console.log(user.password)
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-    console.log('Old password match result:', isMatch);
-    // if (!isMatch) {
-    //   return res.status(401).json({ message: 'Old password is incorrect.' });
-    // }
-     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-
-  
-  
+    const isMatch = bcrypt.compare(oldPassword,user.password)
    
-
-    user.password = hashedPassword;
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Old password is incorrect.' });
+    }
+    user.password = newPassword;
     await user.save();
 
     res.status(200).json({ message: 'Password updated successfully.' });

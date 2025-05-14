@@ -34,7 +34,7 @@ app.post('/upload-skill', upload.any(), uploadSkillController);
     console.log('Database connected.');
 
     
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
 
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
