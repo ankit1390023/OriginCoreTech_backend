@@ -33,7 +33,7 @@ app.post('/upload-skill', upload.any(), uploadSkillController);
     await sequelize.authenticate();  // Authenticating with the database
     console.log('Database connected.');
 
-    
+    // alter
     await sequelize.sync();
 
     app.listen(PORT, () => {

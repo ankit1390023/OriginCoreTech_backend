@@ -1,4 +1,6 @@
 const { JobPost, UserSkill, User, CompanyRecruiterProfile } = require('../models');
+const { Op } = require('sequelize');
+
 
 exports.getOpportunities = async (req, res) => {
   try {
@@ -150,3 +152,85 @@ exports.getJobDetails = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+exports.showCompanyWiseJobPosts = async (req, res) => {
+  try {
+    const companyNameQuery = req.query.companyName;
+
+    if (!companyNameQuery) {
+      return res.status(400).json({ message: "companyName query parameter is required." });
+    }
+
+    // Find company recruiter profiles matching the company name (case-insensitive, partial match)
+    // Use Op.like instead of Op.iLike for MySQL compatibility
+    const matchingCompanies = await CompanyRecruiterProfile.findAll({
+      where: {
+        companyName: {
+          [Op.like]: `%${companyNameQuery}%`
+        }
+      },
+      attributes: ['id', 'companyName', 'logoUrl']
+    });
+
+    if (matchingCompanies.length === 0) {
+      return res.status(404).json({ message: "No companies found matching the given name." });
+    }
+
+    const companyIds = matchingCompanies.map(company => company.id);
+
+    // Fetch job posts for the matching companies
+    const jobPosts = await JobPost.findAll({
+      where: {
+        companyRecruiterProfileId: {
+          [Op.in]: companyIds
+        }
+      },
+      include: [
+        {
+          model: CompanyRecruiterProfile,
+          attributes: ['companyName', 'logoUrl']
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    const currentDate = new Date();
+
+    // Format the response data
+    const responseData = jobPosts.map(job => {
+      // Calculate postedDaysAgo
+      const postedDate = job.createdAt;
+      const diffTime = Math.abs(currentDate - postedDate);
+      let postedDaysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (postedDaysAgo === 0) {
+        postedDaysAgo = "Today";
+      } else {
+        postedDaysAgo = `${postedDaysAgo} days ago`;
+      }
+
+      // Hiring status
+      const hiringStatus = job.numberOfOpenings > 0 ? "Actively Hiring" : "Closed";
+
+      // Salary range
+      const salary = (job.stipendMin && job.stipendMax) ? `${job.stipendMin} - ${job.stipendMax}` : "";
+
+      return {
+        companyName: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.companyName : "",
+        logoUrl: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.logoUrl : "",
+        jobRole: job.jobProfile || "",
+        experience: job.candidatePreferences || "",
+        city: job.cityChoice || "",
+        salary,
+        postedDaysAgo,
+        hiringStatus
+      };
+    });
+
+    return res.status(200).json({ data: responseData });
+
+  } catch (error) {
+    console.error("Error fetching company-wise job posts:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+

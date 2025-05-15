@@ -40,7 +40,12 @@ module.exports = (sequelize, DataTypes) => {
       internshipToDate: DataTypes.DATEONLY,
       isCustomInternshipDate: DataTypes.BOOLEAN,
       collegeName: DataTypes.STRING,
-      course: DataTypes.STRING
+      course: DataTypes.STRING,
+      views: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false
+      }
     });
   
     JobPost.associate = (models) => {

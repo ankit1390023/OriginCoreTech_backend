@@ -1,6 +1,8 @@
 const { User, JobPost, UserDetail, UserSkill, CompanyRecruiterProfile } = require('../models');
 const Application = require('../models/application');
-const { Op, fn, col, literal } = require('sequelize');
+const { Op, fn, col, literal, Sequelize } = require('sequelize');
+
+
 
 
 
@@ -169,6 +171,44 @@ exports.applyForJob = async (req, res) => {
   }
 };
 
+
+
+// New method to get total job posts count by recruiter
+exports.getTotalJobPostsByRecruiter = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized. User ID not found." });
+    }
+
+    // Check if user role is COMPANY (recruiter)
+    const user = await User.findOne({ where: { id: userId, userRole: 'COMPANY' } });
+    if (!user) {
+      return res.status(403).json({ message: "Unauthorized. User is not a recruiter." });
+    }
+
+    // Find company recruiter profile
+    const companyRecruiterProfile = await CompanyRecruiterProfile.findOne({ where: { userId } });
+    if (!companyRecruiterProfile) {
+      return res.status(404).json({ message: "Company recruiter profile not found." });
+    }
+
+    // Count job posts by companyRecruiterProfileId
+    const totalJobPosts = await JobPost.count({
+      where: { companyRecruiterProfileId: companyRecruiterProfile.id }
+    });
+
+    return res.status(200).json({ totalJobPosts });
+
+  } catch (error) {
+    console.error("Error fetching total job posts:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+
 // user application view
 exports.getUserApplications = async (req, res) => {
   try {
@@ -245,3 +285,5 @@ exports.getUserApplications = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+
