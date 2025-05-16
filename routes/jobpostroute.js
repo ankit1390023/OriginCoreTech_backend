@@ -18,4 +18,13 @@ router.get('/api/user/applications', authMiddleware, jobPostController.getUserAp
 // New route to get total job posts count by recruiter
 router.get('/api/jobpost/totalcount', authMiddleware, jobPostController.getTotalJobPostsByRecruiter);
 
+// get the all aplicant detail whcih aplly for specific job it for recuriter
+router.get('/api/jobpost/:jobPostId/allapplicant', authMiddleware, jobPostController.getApplicantsForJob);
+
+// New route to update application status by recruiter
+router.patch('/api/application/status', authMiddleware, jobPostController.updateApplicationStatus);
+
+// New route to get candidates by application status
+router.get('/api/applications/status/:status', authMiddleware, jobPostController.getCandidatesByStatus);
+
 module.exports = router;

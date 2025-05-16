@@ -67,6 +67,10 @@ const Application = sequelize.define('Application', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+   status: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   phoneNumber: {
     type: DataTypes.STRING,
     allowNull: false,

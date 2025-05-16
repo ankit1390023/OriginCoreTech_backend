@@ -5,7 +5,6 @@ const { Op, fn, col, literal, Sequelize } = require('sequelize');
 
 
 
-
 exports.createJobPost = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -92,6 +91,7 @@ exports.createJobPost = async (req, res) => {
 
 
 
+
 exports.applyForJob = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -160,13 +160,60 @@ exports.applyForJob = async (req, res) => {
       language: userDetail?.language || '',
       resume: userDetail?.resume || '',
       email: user?.email || '',
-      phoneNumber: user?.phone || ''
+      phoneNumber: user?.phone || '',
+      status: 'application sent'  // default status on application creation
     });
 
     return res.status(200).json({ message: "Application successful.", data: application });
 
   } catch (error) {
     console.error("Error applying for job:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+
+// New method to update application status by recruiter
+exports.updateApplicationStatus = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { applicationId, jobPostId, userId: applicantUserId, status } = req.body;
+
+    // Validate user is recruiter
+    const recruiter = await User.findOne({ where: { id: userId, userRole: 'COMPANY' } });
+    if (!recruiter) {
+      return res.status(403).json({ message: "Unauthorized. Only recruiters can update application status." });
+    }
+
+    // Validate status value
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
+    }
+
+    // Find application by applicationId or by userId and jobPostId
+    let application;
+    if (applicationId) {
+      application = await Application.findOne({ where: { id: applicationId } });
+    } else if (jobPostId && applicantUserId) {
+      application = await Application.findOne({ where: { jobPostId, userId: applicantUserId } });
+    } else {
+      return res.status(400).json({ message: "Provide either applicationId or both jobPostId and userId of the applicant." });
+    }
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found." });
+    }
+
+    // Update status
+    application.status = status;
+    await application.save();
+
+    return res.status(200).json({ message: "Application status updated successfully.", data: application });
+
+  } catch (error) {
+    console.error("Error updating application status:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -207,9 +254,73 @@ exports.getTotalJobPostsByRecruiter = async (req, res) => {
   }
 };
 
+// New method to get candidates by application status
+exports.getCandidatesByStatus = async (req, res) => {
+  try {
+    const status = req.params.status;
 
+    // Validate status value
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
+    }
 
-// user application view
+    // Fetch applications with the given status
+    const applications = await Application.findAll({
+      where: { status },
+      include: [
+        {
+          model: JobPost,
+          include: [
+            {
+              model: CompanyRecruiterProfile,
+              attributes: ['companyName']
+            }
+          ],
+          attributes: ['jobId', 'jobProfile', 'skillsRequired', 'numberOfOpenings']
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Format response data to include all application fields
+    const responseData = applications.map(app => ({
+      applicationId: app.id,
+      userId: app.userId,
+      jobPostId: app.jobPostId,
+      status: app.status,
+      applyTime: app.createdAt,
+      whyShouldWeHireYou: app.whyShouldWeHireYou,
+      confirmAvailability: app.confirmAvailability,
+      project: app.project,
+      githubLink: app.githubLink,
+      portfolioLink: app.portfolioLink,
+      education: app.education,
+      name: app.name,
+      location: app.location,
+      experience: app.experience,
+      skills: app.skills,
+      language: app.language,
+      resume: app.resume,
+      email: app.email,
+      phoneNumber: app.phoneNumber,
+      jobDetails: {
+        jobId: app.JobPost.jobId,
+        jobProfile: app.JobPost.jobProfile,
+        skillsRequired: app.JobPost.skillsRequired,
+        numberOfOpenings: app.JobPost.numberOfOpenings,
+        companyName: app.JobPost.CompanyRecruiterProfile?.companyName || ''
+      }
+    }));
+
+    return res.status(200).json({ candidates: responseData });
+
+  } catch (error) {
+    console.error("Error fetching candidates by status:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+//  user application view
 exports.getUserApplications = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -285,5 +396,74 @@ exports.getUserApplications = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+
+// api for get the applicant aplly for job specific
+exports.getApplicantsForJob = async (req, res) => {
+  try {
+    const jobPostId = req.params.jobPostId;
+
+    if (!jobPostId) {
+      return res.status(400).json({ message: "Job post ID is required." });
+    }
+
+    // Fetch the job post to get required skills
+    const jobPost = await JobPost.findOne({ where: { jobId: jobPostId } });
+    if (!jobPost) {
+      return res.status(404).json({ message: "Job post not found." });
+    }
+
+    // Parse job skills from skillsRequired string (assuming comma separated)
+    const jobSkills = jobPost.skillsRequired ? jobPost.skillsRequired.split(',').map(skill => skill.trim().toLowerCase()) : [];
+
+    // Fetch all applications for the given jobPostId
+    const applications = await Application.findAll({
+      where: { jobPostId },
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Format response data with applicant details, application time, and calculated match percentage
+    const responseData = applications.map(app => {
+      // Parse applicant skills
+      const applicantSkills = app.skills ? app.skills.split(',').map(skill => skill.trim().toLowerCase()) : [];
+
+      // Calculate matched skills count
+      const matchedSkillsCount = jobSkills.filter(skill => applicantSkills.includes(skill)).length;
+
+      // Calculate match percentage
+      const matchPercentage = jobSkills.length > 0 ? (matchedSkillsCount / jobSkills.length) * 100 : 0;
+
+      return {
+        applicationId: app.id,
+        userId: app.userId,
+        applyTime: app.createdAt,
+        matchPercentage: Math.round(matchPercentage * 100) / 100, // rounded to 2 decimals
+        applicationDetails: {
+          whyShouldWeHireYou: app.whyShouldWeHireYou,
+          confirmAvailability: app.confirmAvailability,
+          project: app.project,
+          githubLink: app.githubLink,
+          portfolioLink: app.portfolioLink,
+          education: app.education,
+          name: app.name,
+          location: app.location,
+          experience: app.experience,
+          skills: app.skills,
+          language: app.language,
+          resume: app.resume,
+          email: app.email,
+          phoneNumber: app.phoneNumber
+        }
+      };
+    });
+
+    return res.status(200).json({ applicants: responseData });
+
+  } catch (error) {
+    console.error("Error fetching applicants for job:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 
 
