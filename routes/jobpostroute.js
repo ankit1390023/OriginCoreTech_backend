@@ -21,6 +21,9 @@ router.get('/api/jobpost/totalcount', authMiddleware, jobPostController.getTotal
 // get the all aplicant detail whcih aplly for specific job it for recuriter
 router.get('/api/jobpost/:jobPostId/allapplicant', authMiddleware, jobPostController.getApplicantsForJob);
 
+// get the all aplicant (fulldetail) whcih aplly for specific job it for recuriter
+router.get('/api/jobpost/:jobPostId/applicant/:applicationId', authMiddleware, jobPostController.getApplicantDetailsById);
+
 // New route to update application status by recruiter
 router.patch('/api/application/status', authMiddleware, jobPostController.updateApplicationStatus);
 

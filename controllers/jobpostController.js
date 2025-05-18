@@ -187,7 +187,7 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 
     // Validate status value
-    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired'];
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
     }
@@ -260,7 +260,7 @@ exports.getCandidatesByStatus = async (req, res) => {
     const status = req.params.status;
 
     // Validate status value
-    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired'];
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
     }
@@ -290,27 +290,10 @@ exports.getCandidatesByStatus = async (req, res) => {
       jobPostId: app.jobPostId,
       status: app.status,
       applyTime: app.createdAt,
-      whyShouldWeHireYou: app.whyShouldWeHireYou,
-      confirmAvailability: app.confirmAvailability,
-      project: app.project,
-      githubLink: app.githubLink,
-      portfolioLink: app.portfolioLink,
-      education: app.education,
       name: app.name,
-      location: app.location,
       experience: app.experience,
-      skills: app.skills,
-      language: app.language,
-      resume: app.resume,
-      email: app.email,
-      phoneNumber: app.phoneNumber,
-      jobDetails: {
-        jobId: app.JobPost.jobId,
-        jobProfile: app.JobPost.jobProfile,
-        skillsRequired: app.JobPost.skillsRequired,
-        numberOfOpenings: app.JobPost.numberOfOpenings,
-        companyName: app.JobPost.CompanyRecruiterProfile?.companyName || ''
-      }
+      jobProfile: app.JobPost.jobProfile,
+
     }));
 
     return res.status(200).json({ candidates: responseData });
@@ -398,7 +381,55 @@ exports.getUserApplications = async (req, res) => {
 };
 
 
-// api for get the applicant aplly for job specific
+exports.getApplicantDetailsById = async (req, res) => {
+  try {
+    const applicationId = req.params.applicationId;
+
+    if (!applicationId) {
+      return res.status(400).json({ message: "Application ID is required." });
+    }
+
+    // Fetch application by ID
+    const application = await Application.findOne({
+      where: { id: applicationId }
+    });
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found." });
+    }
+    // Return full details of the applicant's application
+    return res.status(200).json({
+      applicationId: application.id,
+      userId: application.userId,
+      jobPostId: application.jobPostId,
+      applyTime: application.createdAt,
+      status: application.status,
+      applicationDetails: {
+        whyShouldWeHireYou: application.whyShouldWeHireYou,
+        confirmAvailability: application.confirmAvailability,
+        project: application.project,
+        githubLink: application.githubLink,
+        portfolioLink: application.portfolioLink,
+        education: application.education,
+        name: application.name,
+        location: application.location,
+        experience: application.experience,
+        skills: application.skills,
+        language: application.language,
+        resume: application.resume,
+        email: application.email,
+        phoneNumber: application.phoneNumber
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching applicant details:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+// get the all apllicant which apply for jobspecific 
 exports.getApplicantsForJob = async (req, res) => {
   try {
     const jobPostId = req.params.jobPostId;
@@ -439,20 +470,9 @@ exports.getApplicantsForJob = async (req, res) => {
         applyTime: app.createdAt,
         matchPercentage: Math.round(matchPercentage * 100) / 100, // rounded to 2 decimals
         applicationDetails: {
-          whyShouldWeHireYou: app.whyShouldWeHireYou,
-          confirmAvailability: app.confirmAvailability,
-          project: app.project,
-          githubLink: app.githubLink,
-          portfolioLink: app.portfolioLink,
-          education: app.education,
           name: app.name,
           location: app.location,
           experience: app.experience,
-          skills: app.skills,
-          language: app.language,
-          resume: app.resume,
-          email: app.email,
-          phoneNumber: app.phoneNumber
         }
       };
     });
@@ -464,6 +484,3 @@ exports.getApplicantsForJob = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
-
-
