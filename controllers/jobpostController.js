@@ -485,7 +485,7 @@ exports.getApplicantsForJob = async (req, res) => {
   }
 };
 
-// api for pending task 
+// api for pending task  count
 exports.getPendingTasksgroupbystatus = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -538,15 +538,15 @@ exports.getPendingTasksgroupbystatus = async (req, res) => {
     return res.status(200).json({
       resumeReview: {
         count: resumeReview.length,
-        data: resumeReview
+      
       },
       interviewToSchedule: {
         count: interviewToSchedule.length,
-        data: interviewToSchedule
+        
       },
       offerLetterPending: {
         count: offerLetterPending.length,
-        data: offerLetterPending
+       
       }
     });
 
@@ -558,3 +558,60 @@ exports.getPendingTasksgroupbystatus = async (req, res) => {
     });
   }
 };
+
+
+
+//view pending task/Applications by status
+exports.getviewPendingTasksgroupbystatus = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const statusParam = req.params.status?.trim(); 
+
+    const validStatuses = ["Applied", "ShortList", "Hired"];
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized: User ID not found" });
+    }
+
+    if (!validStatuses.includes(statusParam)) {
+      return res.status(400).json({ message: `Invalid status '${statusParam}'. Must be one of: ${validStatuses.join(", ")}` });
+    }
+
+    const recruiter = await CompanyRecruiterProfile.findOne({ where: { userId } });
+    if (!recruiter) {
+      return res.status(404).json({ message: "Recruiter profile not found" });
+    }
+
+    const jobPosts = await JobPost.findAll({
+      where: { companyRecruiterProfileId: recruiter.id }
+    });
+
+    const jobPostIds = jobPosts.map(job => job.jobId);
+
+    if (jobPostIds.length === 0) {
+      return res.status(200).json({ applications: [] });
+    }
+
+    const applications = await Application.findAll({
+      where: {
+        jobPostId: { [Op.in]: jobPostIds },
+        status: statusParam
+      },
+      order: [['createdAt', 'DESC']]
+    });
+
+    return res.status(200).json({
+      status: statusParam,
+      count: applications.length,
+      applications
+    });
+
+  } catch (error) {
+    console.error("Error in getviewPendingTasksgroupbystatus:", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
+
