@@ -30,4 +30,7 @@ router.patch('/api/application/status', authMiddleware, jobPostController.update
 // New route to get candidates by application status
 router.get('/api/applications/status/:status', authMiddleware, jobPostController.getCandidatesByStatus);
 
+// api for pending
+router.get('/api/pendingtask/grouped',authMiddleware,jobPostController.getPendingTasksgroupbystatus);
+
 module.exports = router;

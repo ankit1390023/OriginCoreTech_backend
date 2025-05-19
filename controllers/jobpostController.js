@@ -1,6 +1,6 @@
 const { User, JobPost, UserDetail, UserSkill, CompanyRecruiterProfile } = require('../models');
 const Application = require('../models/application');
-const { Op, fn, col, literal, Sequelize } = require('sequelize');
+const { Op, fn, col, literal, Sequelize, where } = require('sequelize');
 
 
 
@@ -161,7 +161,7 @@ exports.applyForJob = async (req, res) => {
       resume: userDetail?.resume || '',
       email: user?.email || '',
       phoneNumber: user?.phone || '',
-      status: 'application sent'  // default status on application creation
+      status: 'Applied'  // default status on application creation
     });
 
     return res.status(200).json({ message: "Application successful.", data: application });
@@ -187,7 +187,7 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 
     // Validate status value
-    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList'];
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList','NotInterested'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
     }
@@ -260,7 +260,7 @@ exports.getCandidatesByStatus = async (req, res) => {
     const status = req.params.status;
 
     // Validate status value
-    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList'];
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList','NotInterested'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
     }
@@ -482,5 +482,79 @@ exports.getApplicantsForJob = async (req, res) => {
   } catch (error) {
     console.error("Error fetching applicants for job:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// api for pending task 
+exports.getPendingTasksgroupbystatus = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    console.log("getPendingTasksgroupbystatus - userId:", userId);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized. User ID not found." });
+    }
+
+    const companyRecruiterProfile = await CompanyRecruiterProfile.findOne({ where: { userId } });
+    if (!companyRecruiterProfile) {
+      return res.status(404).json({ message: "Company recruiter profile not found." });
+    }
+
+    const jobPosts = await JobPost.findAll({
+      where: { companyRecruiterProfileId: companyRecruiterProfile.id }
+    });
+
+    const jobPostIds = jobPosts.map(job => job.jobId);
+
+    if (jobPostIds.length === 0) {
+      return res.status(200).json({
+        resumeReview: [],
+        interviewToSchedule: [],
+        offerLetterPending: []
+      });
+    }
+
+    const applications = await Application.findAll({
+      where: {
+        jobPostId: { [Op.in]: jobPostIds }
+      },
+      order: [['createdAt', 'DESC']]
+    });
+    
+    const resumeReview = [];
+    const interviewToSchedule = [];
+    const offerLetterPending = [];
+
+    applications.forEach(app => {
+      const statusTrimmed = app.status.trim();
+      if (statusTrimmed === 'Applied') {
+        resumeReview.push(app);
+      } else if (statusTrimmed === 'ShortList') {
+        interviewToSchedule.push(app);
+      } else if (statusTrimmed === 'Hired') {
+        offerLetterPending.push(app);
+      }
+    });
+
+    return res.status(200).json({
+      resumeReview: {
+        count: resumeReview.length,
+        data: resumeReview
+      },
+      interviewToSchedule: {
+        count: interviewToSchedule.length,
+        data: interviewToSchedule
+      },
+      offerLetterPending: {
+        count: offerLetterPending.length,
+        data: offerLetterPending
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching pending tasks grouped by status:", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message
+    });
   }
 };

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../jwtConfig');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
+const otpController = require('./otpController');
 exports.registerUser = async (req, res) => {
   const { firstName, lastName, email, phone, password, userRole } = req.body;
 
@@ -192,6 +193,88 @@ exports.softDeleteAccount = async (req, res) => {
     res.status(200).json({ message: 'Account soft deleted successfully.' });
   } catch (error) {
     console.error('Soft delete error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Forgot Password - send OTP to email
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'Email is required' });
+
+  try {
+    // Check if user exists
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Call otpController.sendOtp to send OTP email
+    // We simulate calling sendOtp function here by invoking it directly
+    // Since sendOtp expects req and res, we create mock objects
+
+    const mockReq = { body: { email } };
+    const mockRes = {
+      status: (code) => ({
+        json: (obj) => ({ code, obj }),
+      }),
+      json: (obj) => ({ code: 200, obj }),
+    };
+
+    await otpController.sendOtp(mockReq, mockRes);
+
+    res.status(200).json({ message: 'OTP sent to email' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Reset Password with OTP verification
+exports.resetPasswordWithOtp = async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  if (!email || !otp || !newPassword) {
+    return res.status(400).json({ message: 'Email, OTP and new password are required' });
+  }
+
+  try {
+    // Verify OTP by calling otpController.verifyOtp
+    // Since verifyOtp expects req and res, we create mock objects with promise support
+
+    const mockReq = { body: { email, otp } };
+    let otpVerified = false;
+    const mockRes = {
+      status: (code) => ({
+        json: (obj) => {
+          if (code === 200 && obj.message.includes('verified')) {
+            otpVerified = true;
+          }
+          return { code, obj };
+        },
+      }),
+      json: (obj) => {
+        if (obj.message.includes('verified')) {
+          otpVerified = true;
+        }
+        return { code: 200, obj };
+      },
+    };
+
+    otpController.verifyOtp(mockReq, mockRes);
+
+    if (!otpVerified) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    // OTP verified, update password
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

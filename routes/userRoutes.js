@@ -10,4 +10,8 @@ router.post('/getUserData',userController.getUserDetailsByEmail);
 router.post('/changeEmail', authMiddleware, userController.changeEmail);
 router.post('/changePassword', authMiddleware, userController.changePassword);
 router.post('/softDeleteAccount', authMiddleware, userController.softDeleteAccount);
+
+router.post('/forgotPassword', userController.forgotPassword);
+router.post('/resetPasswordWithOtp', userController.resetPasswordWithOtp);
+
 module.exports = router;
