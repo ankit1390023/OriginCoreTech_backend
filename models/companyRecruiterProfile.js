@@ -6,78 +6,79 @@ module.exports = (sequelize, DataTypes) => {
       unique: true,
       references: {
         model: 'Users',
-        key: 'id',
-      },
-      onDelete: 'CASCADE',
+        key: 'id'
+      }
     },
-   
     recruiterName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: false
     },
     recruiterEmail: {
       type: DataTypes.STRING,
       allowNull: false,
-      validate: { isEmail: true },
+      validate: {
+        isEmail: true
+      }
     },
     recruiterPhone: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true
     },
     designation: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: true
     },
     companyName: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: true
     },
     industry: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: true
     },
     location: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: true
     },
     about: {
       type: DataTypes.TEXT,
-      allowNull: true,
+      allowNull: true
     },
     logoUrl: {
       type: DataTypes.STRING,
-      allowNull: true,
-      validate: { isUrl: true },
-    },
-    profilePic: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      validate: { isUrl: true },
+      allowNull: true
     },
     hiringPreferences: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: true
     },
     languagesKnown: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: true
     },
     isEmailVerified: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      defaultValue: false
     },
     isPhoneVerified: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      defaultValue: false
     },
     isGstVerified: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      defaultValue: false
     },
+    profilePic: {
+      type: DataTypes.STRING,
+      allowNull: true
+    }
+  }, {
+    tableName: 'company_recruiter_profiles',
+    timestamps: true
   });
 
-  CompanyRecruiterProfile.associate = function(models) {
-    CompanyRecruiterProfile.belongsTo(models.User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+  CompanyRecruiterProfile.associate = (models) => {
+    CompanyRecruiterProfile.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
   };
 
   return CompanyRecruiterProfile;

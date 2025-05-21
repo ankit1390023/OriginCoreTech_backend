@@ -153,7 +153,7 @@ exports.applyForJob = async (req, res) => {
       githubLink,
       portfolioLink,
       education,
-      name: user?.firstName || '',
+      name: userDetail?.firstName || '',
       location: userDetail?.currentLocation || '',
       experience: userDetail?.totalExperience || '',
       skills: userSkills.map(skill => skill.skill).join(', '),
@@ -561,7 +561,7 @@ exports.getPendingTasksgroupbystatus = async (req, res) => {
 
 
 
-//view pending task/Applications by status
+//view pending task Applications by status
 exports.getviewPendingTasksgroupbystatus = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -614,4 +614,6 @@ exports.getviewPendingTasksgroupbystatus = async (req, res) => {
     });
   }
 };
+
+// approvals 
 

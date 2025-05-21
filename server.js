@@ -9,6 +9,8 @@ const userDetailRoutes = require('./routes/userdetailRoutes');
 const uploadSkillController = require('./controllers/userSkillController');
 const jobpostRoute = require('./routes/jobpostroute');
 const companyRecruiterProfileRoutes = require('./routes/companyRecruiterProfileRoutes');
+const interviewInvitationRoutes = require('./routes/interviewInvitationRoutes');
+const assignmentRoutes = require('./routes/assignmentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,7 +22,10 @@ app.use('/api/otp', otpRoutes);
 app.use('/api/mobileotp',otpmobileRoutes);   
 app.use('/api/user-details', userDetailRoutes);
 app.use('/api/company-recruiter', companyRecruiterProfileRoutes);
+app.use('/api/interview-invitations', interviewInvitationRoutes);
+app.use('/api/assignments', assignmentRoutes);
 app.use('/', jobpostRoute);
+
 
 
 

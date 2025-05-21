@@ -1,4 +1,4 @@
-const fs = require('fs');
+
 const { UserSkill } = require('../models');
 
 const uploadSkillController = async (req, res) => {

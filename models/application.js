@@ -82,6 +82,7 @@ const Application = sequelize.define('Application', {
 
 Application.associate = (models) => {
   Application.belongsTo(models.JobPost, { foreignKey: 'jobPostId' });
+  Application.hasMany(models.InterviewInvitation, { foreignKey: 'applicationId' });
 };
 
 module.exports = Application;
