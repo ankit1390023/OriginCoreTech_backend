@@ -79,6 +79,7 @@ module.exports = (sequelize, DataTypes) => {
   CompanyRecruiterProfile.associate = (models) => {
     CompanyRecruiterProfile.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
     CompanyRecruiterProfile.hasMany(models.JobPost, { foreignKey: 'companyRecruiterProfileId', as: 'jobPosts' });
+    CompanyRecruiterProfile.hasMany(models.Experience, { foreignKey: 'companyRecruiterProfileId', as: 'experiences' });
   };
 
   return CompanyRecruiterProfile;

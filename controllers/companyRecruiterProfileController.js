@@ -3,6 +3,7 @@ const path = require('path');
 const { User, CompanyRecruiterProfile,JobPost, } = require('../models');
 const Application = require('../models/application');
 const { Op, fn, col, literal, Sequelize } = require('sequelize');
+const { Experience } = require('../models');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -281,10 +282,50 @@ const incrementViewCount = async (req, res) => {
   }
 };
 
+
+async function updateExperienceStatus(req, res) {
+  try {
+    const userId = req.user.id;
+    const { experienceId } = req.params;
+    const { status } = req.body;
+
+    if (!['approved', 'unapproved', 'pending', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value.' });
+    }
+
+    // Find company recruiter profile for the logged-in user
+    const companyRecruiterProfile = await require('../models').CompanyRecruiterProfile.findOne({ where: { userId } });
+    if (!companyRecruiterProfile) {
+      return res.status(403).json({ message: 'Unauthorized: Company recruiter profile not found.' });
+    }
+
+    // Find experience by id and companyRecruiterProfileId
+    const experience = await Experience.findOne({
+      where: {
+        id: experienceId,
+        companyRecruiterProfileId: companyRecruiterProfile.id,
+      }
+    });
+
+    if (!experience) {
+      return res.status(404).json({ message: 'Experience not found for this company recruiter.' });
+    }
+
+    experience.status = status;
+    await experience.save();
+
+    return res.status(200).json({ message: 'Experience status updated successfully.', experience });
+  } catch (error) {
+    console.error('Error updating experience status:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
 module.exports = {
   createProfile,
   getProfile,
   updateProfile,
   getJobPostsByRecruiter,
   incrementViewCount,
+  updateExperienceStatus,
 };

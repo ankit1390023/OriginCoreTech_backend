@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createProfile, getProfile, updateProfile,getJobPostsByRecruiter,incrementViewCount } = require('../controllers/companyRecruiterProfileController');
+const { createProfile, getProfile, updateProfile,getJobPostsByRecruiter,incrementViewCount, updateExperienceStatus } = require('../controllers/companyRecruiterProfileController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Create recruiter profile
@@ -17,5 +17,7 @@ router.get('/jobpost/list', authMiddleware, getJobPostsByRecruiter);
 // incremnt views
 router.post('/jobpost/:jobId/increment-view', incrementViewCount);
 
+// New route to update experience status by company recruiter
+router.put('/experience/:experienceId/status', authMiddleware, updateExperienceStatus);
 
 module.exports = router;

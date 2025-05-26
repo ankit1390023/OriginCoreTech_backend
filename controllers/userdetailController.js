@@ -1,4 +1,4 @@
-const {  User, UserDetail, UserSkill, FeedPost } = require('../models');
+const {  User, UserDetail, UserSkill, FeedPost, Experience } = require('../models');
 
 const { Op } = require('sequelize');
 
@@ -20,14 +20,6 @@ async function createUserDetails(req, res) {
       specialization,
       startYear,
       endYear,
-      totalExperience,
-      currentJobRole,
-      currentCompany,
-      salaryDetails,
-      currentlyLookingFor,
-      workMode,
-      currentLocation,
-      jobLocation,
       aboutus,
       careerObjective,
       resume,
@@ -39,11 +31,12 @@ async function createUserDetails(req, res) {
       aadhaarNumber,
       aadhaarCardFile,
       isAadhaarVerified,
+      experiences // new field for multiple experiences
     } = req.body;
 
     console.log('Received user detail data:', req.body);
 
-    if (!email || !firstName || !lastName || !phone || !dob || !userType) {
+    if (!email || !firstName || !lastName || !phone || !dob || !userType || !gender) {
       return res.status(400).json({ message: "Required fields are missing." });
     }
 
@@ -70,8 +63,6 @@ async function createUserDetails(req, res) {
     }
 
     let eduFields = {};
-    let workFields = {};
-
     if (userType === 'School Student' || userType === 'College Student') {
       eduFields = {
         educationStandard,
@@ -81,35 +72,6 @@ async function createUserDetails(req, res) {
         startYear,
         endYear,
       };
-      workFields = {
-        totalExperience: null,
-        currentJobRole: null,
-        currentCompany: null,
-        salaryDetails: null,
-        currentlyLookingFor: null,
-        workMode: null,
-        currentLocation: null,
-        jobLocation: null,
-      };
-    } else if (userType === 'Working Professional') {
-      eduFields = {
-        educationStandard: null,
-        course: null,
-        collegeName: null,
-        specialization: null,
-        startYear: null,
-        endYear: null,
-      };
-      workFields = {
-        totalExperience,
-        currentJobRole,
-        currentCompany,
-        salaryDetails,
-        currentlyLookingFor,
-        workMode,
-        currentLocation,
-        jobLocation,
-      };
     } else {
       eduFields = {
         educationStandard: null,
@@ -118,16 +80,6 @@ async function createUserDetails(req, res) {
         specialization: null,
         startYear: null,
         endYear: null,
-      };
-      workFields = {
-        totalExperience: null,
-        currentJobRole: null,
-        currentCompany: null,
-        salaryDetails: null,
-        currentlyLookingFor: null,
-        workMode: null,
-        currentLocation: null,
-        jobLocation: null,
       };
     }
 
@@ -143,7 +95,6 @@ async function createUserDetails(req, res) {
       languages,
       userType,
       ...eduFields,
-      ...workFields,
       aboutus,
       careerObjective,
       resume,
@@ -157,8 +108,32 @@ async function createUserDetails(req, res) {
       isAadhaarVerified,
     });
 
+    // If experiences array is provided, create associated Experience records
+    if (Array.isArray(experiences) && experiences.length > 0) {
+      for (const exp of experiences) {
+        let companyRecruiterProfileId = exp.companyRecruiterProfileId || null;
+        if (!companyRecruiterProfileId && exp.currentCompany) {
+          // Fetch companyRecruiterProfileId by companyName
+          const companyProfile = await require('../models').CompanyRecruiterProfile.findOne({
+            where: { companyName: exp.currentCompany }
+          });
+          if (companyProfile) {
+            companyRecruiterProfileId = companyProfile.id;
+          }
+        }
+        await Experience.create({
+          userDetailId: userDetail.id,
+          companyRecruiterProfileId,
+          totalExperience: exp.totalExperience || null,
+          currentJobRole: exp.currentJobRole || null,
+          currentCompany: exp.currentCompany || null,
+          status: exp.status || 'pending',
+        });
+      }
+    }
+
     return res.status(201).json({
-      message: "User details added successfully.",
+      message: "User details and experiences added successfully.",
       userDetail,
     });
 
@@ -171,7 +146,15 @@ async function createUserDetails(req, res) {
 async function getUserDetailsByUserId(req, res) {
   try {
     const { userId } = req.params;
-    const userDetail = await UserDetail.findOne({ where: { userId } });
+    const userDetail = await UserDetail.findOne({ 
+      where: { userId },
+      include: [
+        {
+          model: require('../models').Experience,
+          as: 'experiences'
+        }
+      ]
+    });
     if (!userDetail) {
       return res.status(404).json({ message: "User details not found." });
     }
@@ -186,6 +169,9 @@ async function updateUserDetailsByUserId(req, res) {
   try {
     const { userId } = req.params;
     const updateData = req.body;
+    const experiences = updateData.experiences || [];
+    delete updateData.experiences;
+
     const allowedFields = [
       'aboutus',
       'careerObjective',
@@ -195,7 +181,6 @@ async function updateUserDetailsByUserId(req, res) {
       'isPhoneVerified',
       'isGstVerified',
       'userprofilepic'
-
     ];
 
     const filteredUpdateData = { ...updateData };
@@ -210,8 +195,64 @@ async function updateUserDetailsByUserId(req, res) {
       return res.status(404).json({ message: "User details not found." });
     }
 
-    // Update all fields including the new ones
+    // Update userdetail fields
     await userDetail.update(updateData);
+
+    // Update experiences if provided
+    if (Array.isArray(experiences) && experiences.length > 0) {
+      const Experience = require('../models').Experience;
+      console.log('Existing experiences for userDetailId:', userDetail.id);
+      const allExperiences = await Experience.findAll({ where: { userDetailId: userDetail.id } });
+      console.log('All experiences:', allExperiences.map(e => e.toJSON()));
+      for (const exp of experiences) {
+        console.log('Updating experience:', exp);
+        if (exp.id) {
+          // Update existing experience
+          const existingExp = await Experience.findByPk(exp.id);
+          if (existingExp) {
+            // If status is approved, change to pending on update
+            if (existingExp.status === 'approved') {
+              exp.status = 'pending';
+            }
+            await existingExp.update(exp);
+            console.log('Updated experience:', existingExp);
+          } else {
+            console.log('Experience not found with id:', exp.id);
+          }
+        } else {
+          // Try to find experience by userDetailId, currentCompany, currentJobRole
+          const { Op } = require('sequelize');
+          const { sequelize } = require('../models');
+          const existingExp = await Experience.findOne({
+            where: {
+              userDetailId: userDetail.id,
+              [Op.and]: [
+                // Case-insensitive and trimmed comparison for currentCompany
+                sequelize.where(
+                  sequelize.fn('LOWER', sequelize.fn('TRIM', sequelize.col('currentCompany'))),
+                  exp.currentCompany ? exp.currentCompany.trim().toLowerCase() : null
+                ),
+                // Case-insensitive and trimmed comparison for currentJobRole
+                sequelize.where(
+                  sequelize.fn('LOWER', sequelize.fn('TRIM', sequelize.col('currentJobRole'))),
+                  exp.currentJobRole ? exp.currentJobRole.trim().toLowerCase() : null
+                )
+              ]
+            }
+          });
+          if (existingExp) {
+            if (existingExp.status === 'approved') {
+              exp.status = 'pending';
+            }
+            await existingExp.update(exp);
+            console.log('Updated experience by fields:', existingExp);
+          } else {
+            console.log('Experience not found by fields, skipping update:', exp);
+          }
+        }
+        // Do not create new experience records on update
+      }
+    }
 
     return res.status(200).json({ message: "User details updated successfully.", userDetail });
   } catch (error) {

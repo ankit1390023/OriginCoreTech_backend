@@ -62,11 +62,6 @@ module.exports = (sequelize, DataTypes) => {
     startYear: DataTypes.STRING,
     endYear: DataTypes.STRING,
     jobLocation: { type: DataTypes.STRING },
-
-
-    totalExperience: DataTypes.STRING,
-    currentJobRole: DataTypes.STRING,
-    currentCompany: DataTypes.STRING,
     salaryDetails: DataTypes.STRING,
     currentlyLookingFor: DataTypes.STRING,
     workMode: DataTypes.STRING,
@@ -111,6 +106,7 @@ module.exports = (sequelize, DataTypes) => {
 
   UserDetail.associate = function (models) {
     UserDetail.belongsTo(models.User, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    UserDetail.hasMany(models.Experience, { foreignKey: 'userDetailId', as: 'experiences' });
   };
 
   return UserDetail;
