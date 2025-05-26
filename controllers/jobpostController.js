@@ -1,8 +1,7 @@
-const { User, JobPost, UserDetail, UserSkill, CompanyRecruiterProfile } = require('../models');
+
+const { User, JobPost, UserDetail, UserSkill, CompanyRecruiterProfile, Domain } = require('../models');
 const Application = require('../models/application');
 const { Op, fn, col, literal, Sequelize, where } = require('sequelize');
-
-
 
 
 exports.createJobPost = async (req, res) => {
@@ -33,6 +32,7 @@ exports.createJobPost = async (req, res) => {
       perks,
       screeningQuestions,
       phoneContact,
+      alternatePhoneNumber,
       internshipDuration,
       internshipStartDate,
       internshipFromDate,
@@ -72,6 +72,7 @@ exports.createJobPost = async (req, res) => {
       perks,
       screeningQuestions,
       phoneContact,
+      alternatePhoneNumber,
       internshipDuration,
       internshipStartDate,
       internshipFromDate: isCustomInternshipDate ? internshipFromDate : null,
@@ -85,6 +86,18 @@ exports.createJobPost = async (req, res) => {
 
   } catch (error) {
     console.error("Error creating job post:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+exports.getAllDomains = async (req, res) => {
+  try {
+    const domains = await Domain.findAll({
+      attributes: ['domain_name']
+    });
+    return res.status(200).json({ domains });
+  } catch (error) {
+    console.error("Error fetching domains:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -187,7 +200,7 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 
     // Validate status value
-    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList','NotInterested'];
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList','NotInterested','Send Assignment'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
     }
@@ -260,7 +273,7 @@ exports.getCandidatesByStatus = async (req, res) => {
     const status = req.params.status;
 
     // Validate status value
-    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList','NotInterested'];
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList','NotInterested','Send Assignment'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
     }
@@ -303,6 +316,7 @@ exports.getCandidatesByStatus = async (req, res) => {
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 //  user application view
 exports.getUserApplications = async (req, res) => {
   try {
@@ -380,7 +394,7 @@ exports.getUserApplications = async (req, res) => {
   }
 };
 
-
+// applicant detail
 exports.getApplicantDetailsById = async (req, res) => {
   try {
     const applicationId = req.params.applicationId;
@@ -615,5 +629,171 @@ exports.getviewPendingTasksgroupbystatus = async (req, res) => {
   }
 };
 
-// approvals 
 
+// api for filter 
+exports.getAllJobFilterOptions = async (req, res) => {
+  try {
+    const [
+      jobProfiles,
+      cityChoices,
+      jobTypes,
+      candidatePreferences,
+      salaryRanges,
+      companyNames
+    ] = await Promise.all([
+      JobPost.findAll({
+        attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('jobProfile')), 'jobProfile']],
+        where: { jobProfile: { [Op.ne]: null } },
+        order: [['jobProfile', 'ASC']]
+      }),
+      JobPost.findAll({
+        attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('cityChoice')), 'cityChoice']],
+        where: { cityChoice: { [Op.ne]: null } },
+        order: [['cityChoice', 'ASC']]
+      }),
+      JobPost.findAll({
+        attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('jobType')), 'jobType']],
+        where: { jobType: { [Op.ne]: null } },
+        order: [['jobType', 'ASC']]
+      }),
+      JobPost.findAll({
+        attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('candidatePreferences')), 'candidatePreferences']],
+        where: { candidatePreferences: { [Op.ne]: null } },
+        order: [['candidatePreferences', 'ASC']]
+      }),
+      JobPost.findAll({
+        attributes: [
+          [Sequelize.fn('MIN', Sequelize.col('stipendMin')), 'minSalary'],
+          [Sequelize.fn('MAX', Sequelize.col('stipendMax')), 'maxSalary']
+        ]
+      }),
+      CompanyRecruiterProfile.findAll({
+        attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('companyName')), 'companyName']],
+        where: {
+          companyName: {
+            [Op.and]: [
+              { [Op.ne]: null },
+              { [Op.ne]: '' }
+            ]
+          }
+        },
+        order: [['companyName', 'ASC']]
+      })
+    ]);
+
+    return res.status(200).json({
+      jobProfiles: jobProfiles.map(jp => jp.jobProfile),
+      cityChoices: cityChoices.map(c => c.cityChoice),
+      jobTypes: jobTypes.map(jt => jt.jobType),
+      candidatePreferences: candidatePreferences.map(cp => cp.candidatePreferences),
+      salaryRanges: salaryRanges[0],
+      companyNames: companyNames.map(cn => cn.companyName)
+    });
+
+  } catch (error) {
+    console.error("Error fetching filter options:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// filter job post 
+const normalize = (str) => (typeof str === 'string' ? str.trim().toLowerCase() : '');
+
+exports.filterJobPosts = async (req, res) => {
+  try {
+    const {
+      jobProfile,
+      cityChoice,
+      jobType,
+      candidatePreferences,
+      stipendMin,
+      stipendMax,
+      companyName,
+      limit = 10,
+      offset = 0
+    } = req.query;
+
+    const whereConditions = {};
+
+    if (jobProfile) {
+      whereConditions.jobProfile = where(
+        fn('LOWER', col('jobProfile')),
+        {
+          [Op.like]: `%${normalize(jobProfile)}%`
+        }
+      );
+    }
+
+    if (cityChoice) {
+      whereConditions.cityChoice = where(
+        fn('LOWER', col('cityChoice')),
+        {
+          [Op.like]: `%${normalize(cityChoice)}%`
+        }
+      );
+    }
+
+    if (jobType) {
+      whereConditions.jobType = where(
+        fn('LOWER', col('jobType')),
+        {
+          [Op.like]: `%${normalize(jobType)}%`
+        }
+      );
+    }
+
+    if (candidatePreferences) {
+      whereConditions.candidatePreferences = where(
+        fn('LOWER', col('candidatePreferences')),
+        {
+          [Op.like]: `%${normalize(candidatePreferences)}%`
+        }
+      );
+    }
+
+    if (stipendMin && stipendMax) {
+      whereConditions.stipendMin = { [Op.gte]: Number(stipendMin) };
+      whereConditions.stipendMax = { [Op.lte]: Number(stipendMax) };
+    } else if (stipendMin) {
+      whereConditions.stipendMin = { [Op.gte]: Number(stipendMin) };
+    } else if (stipendMax) {
+      whereConditions.stipendMax = { [Op.lte]: Number(stipendMax) };
+    }
+
+    // Filter for associated company name
+    const companyInclude = {
+      model: CompanyRecruiterProfile,
+      attributes: ['companyName']
+    };
+
+    if (companyName) {
+      companyInclude.where = where(
+        fn('LOWER', col('CompanyRecruiterProfile.companyName')),
+        {
+          [Op.like]: `%${normalize(companyName)}%`
+        }
+      );
+    }
+
+    // Fetch filtered job posts
+    const jobPosts = await JobPost.findAll({
+      where: whereConditions,
+      include: [companyInclude],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    // Count for pagination
+    const totalCount = await JobPost.count({
+      where: whereConditions,
+      include: companyName ? [companyInclude] : []
+    });
+
+    return res.status(200).json({ jobPosts, totalCount });
+
+  } catch (error) {
+    console.error('Error filtering job posts:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};

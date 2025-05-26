@@ -35,5 +35,12 @@ router.get('/api/pendingtask/grouped',authMiddleware,jobPostController.getPendin
 // api for pending view
 router.get('/api/pendingtask/:status', authMiddleware, jobPostController.getviewPendingTasksgroupbystatus);
 
+// Routes for filter APIs
+router.get('/api/jobpost/filter', authMiddleware, jobPostController.getAllJobFilterOptions);
+router.get('/api/jobpost/filtering', authMiddleware, jobPostController.filterJobPosts);
+
+
+// domaintable
+router.get('/api/domain/all', authMiddleware, jobPostController.getAllDomains);
 
 module.exports = router;

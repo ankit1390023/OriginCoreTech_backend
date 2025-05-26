@@ -31,6 +31,10 @@ module.exports = (sequelize) => {
     userRole: {
       type: DataTypes.ENUM('STUDENT', 'COMPANY', 'UNIVERSITY'),
       defaultValue: 'STUDENT',
+    },
+    status: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1, // 1 means profile incomplete, 0 means complete
     }
   }, {
     timestamps: true,
@@ -68,7 +72,27 @@ module.exports = (sequelize) => {
 
     // Add association to CompanyRecruiterProfile
     User.hasOne(models.CompanyRecruiterProfile, { foreignKey: 'userId' });
+
+    User.hasMany(models.FeedPost, { foreignKey: 'userId', onDelete: 'CASCADE' });
+
+      User.belongsToMany(models.User, {
+    through: models.Follow,
+    as: 'Followers',
+    foreignKey: 'followedId',
+    otherKey: 'followerId'
+  });
+  User.belongsToMany(models.User, {
+    through: models.Follow,
+    as: 'Following',
+    foreignKey: 'followerId',
+    otherKey: 'followedId'
+  });
+
+
   };
+    
+
+
 
   return User;
 };

@@ -73,12 +73,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     }
   }, {
-    tableName: 'company_recruiter_profiles',
     timestamps: true
   });
 
   CompanyRecruiterProfile.associate = (models) => {
     CompanyRecruiterProfile.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+    CompanyRecruiterProfile.hasMany(models.JobPost, { foreignKey: 'companyRecruiterProfileId', as: 'jobPosts' });
   };
 
   return CompanyRecruiterProfile;

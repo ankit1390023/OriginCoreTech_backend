@@ -41,6 +41,8 @@ const createAssignment = async (req, res) => {
       name: application.name,
       fileUpload,
     });
+    await application.update({ status: 'Send Assignment' });
+
 
     // Prepare response similar to interviewInvitationController
     const response = {

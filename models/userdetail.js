@@ -70,7 +70,7 @@ module.exports = (sequelize, DataTypes) => {
     salaryDetails: DataTypes.STRING,
     currentlyLookingFor: DataTypes.STRING,
     workMode: DataTypes.STRING,
-
+    
     aboutus: {
       type: DataTypes.TEXT,
       allowNull: true,

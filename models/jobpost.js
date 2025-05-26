@@ -20,8 +20,8 @@ module.exports = (sequelize, DataTypes) => {
       skillsRequired: DataTypes.STRING,
       skillRequiredNote: DataTypes.STRING,
       jobType: DataTypes.STRING, 
+      jobTime: DataTypes.STRING,
       daysInOffice: DataTypes.INTEGER,
-      jobTime: DataTypes.STRING, 
       cityChoice: DataTypes.STRING,
       numberOfOpenings: DataTypes.INTEGER,
       jobDescription: DataTypes.TEXT,
@@ -41,6 +41,8 @@ module.exports = (sequelize, DataTypes) => {
       isCustomInternshipDate: DataTypes.BOOLEAN,
       collegeName: DataTypes.STRING,
       course: DataTypes.STRING,
+      alternatePhoneNumber: DataTypes.STRING,
+      
       views: {
         type: DataTypes.INTEGER,
         defaultValue: 0,

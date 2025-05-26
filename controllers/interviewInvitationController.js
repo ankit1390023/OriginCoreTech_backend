@@ -34,6 +34,7 @@ const sendInterviewInvitation = async (req, res) => {
       interviewTime,
       videoLink,
     });
+await application.update({ status: 'Interview' });
 
     // Prepare response including name (firstname) from application
     const response = {

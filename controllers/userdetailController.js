@@ -1,4 +1,5 @@
-const { User, UserDetail } = require('../models');
+const {  User, UserDetail, UserSkill, FeedPost } = require('../models');
+
 const { Op } = require('sequelize');
 
 async function createUserDetails(req, res) {
@@ -302,6 +303,61 @@ async function updateAadhaarDetails(req, res) {
   }
 }
 
+// get public profile for the feed 
+const getPublicProfileByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // 1. Basic user detail
+    const userDetailRaw = await UserDetail.findOne({
+      where: { userId },
+      attributes: [
+        'firstName', 'lastName', 'language', 'userType', 'aboutus',
+        'careerObjective', 'userprofilepic', 'email', 
+        'course', 'specialization',
+        'totalExperience', 'Standard'
+      ],
+      raw: true
+    });
+
+    if (!userDetailRaw) {
+      return res.status(404).json({ message: "Public profile not found." });
+    }
+
+    // Remove null or empty fields from userDetail
+    const userDetail = {};
+    for (const key in userDetailRaw) {
+      if (userDetailRaw[key] !== null && userDetailRaw[key] !== '') {
+        userDetail[key] = userDetailRaw[key];
+      }
+    }
+
+    // 2. User skills
+    const userSkills = await UserSkill.findAll({
+      where: { userId },
+      attributes: ['skill']
+    });
+
+    // 3. User activity (feed posts)
+    const feedPosts = await FeedPost.findAll({
+      where: { userId },
+      attributes: ['caption', 'image', 'likeCount', 'commentCount', 'createdAt'],
+      order: [['createdAt', 'DESC']]
+    });
+
+    return res.status(200).json({
+      publicProfile: userDetail,
+      skills: userSkills,
+      activity: feedPosts
+    });
+  } catch (error) {
+    console.error("Error fetching public profile:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+
 module.exports = { 
   createUserDetails, 
   getUserDetailsByUserId, 
@@ -309,6 +365,7 @@ module.exports = {
   updateTermsAndCondition,
   getTermsAndCondition,
   getAadhaarVerificationStatus,
-  updateAadhaarDetails
+  updateAadhaarDetails,
+  getPublicProfileByUserId
 };
 

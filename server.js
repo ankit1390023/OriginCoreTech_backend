@@ -11,6 +11,9 @@ const jobpostRoute = require('./routes/jobpostroute');
 const companyRecruiterProfileRoutes = require('./routes/companyRecruiterProfileRoutes');
 const interviewInvitationRoutes = require('./routes/interviewInvitationRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
+const feedRoutes = require('./routes/feedRoutes');
+const skillRoutes = require('./routes/skillRoutes');
+const { Domain, Skill } = require('./models');  // Added import for Domain and Skill
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,9 +28,8 @@ app.use('/api/company-recruiter', companyRecruiterProfileRoutes);
 app.use('/api/interview-invitations', interviewInvitationRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/', jobpostRoute);
-
-
-
+app.use('/api/feed', feedRoutes);
+app.use('/api/skills', skillRoutes);
 
 const upload = multer({ dest: 'uploads/' });
 app.post('/upload-skill', upload.any(), uploadSkillController);
@@ -54,7 +56,8 @@ const allowedLocations = [
   'Pune',
   'Chennai',
   'Gurugram',
-  'Noida'
+  'Noida',
+  'Delhi NCR'
 ];
 const allowedJobRoles = [
   'Frontend Developer',
@@ -92,4 +95,49 @@ app.get('/api/specializations', (req, res) => {
 
 app.get('/api/colleges', (req, res) => {
   res.json(allowedColleges);
+});
+
+// jobpost data
+const durationOptions =
+  ['Permanent', '6 Months', '3 Months', '4 Months', '2 Months'];
+
+const allowedStartMonths = ['January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'];
+const allowedPerks = [
+  'Certificate',
+  'Letter of recommendation',
+  'Flexible work hours',
+  '5 days a week',
+  'Informal dress code',
+  'Free snacks & beverages',
+  'Pre-placement offer (PPO)'
+];
+const allowedCities = [ 'Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', 'Kolkata'];
+
+app.get('/api/internship-filters', async (req, res) => {
+  try {
+    // Get all domains
+    const domains = await Domain.findAll({
+      attributes: [ 'domain_name']
+    });
+
+    // Get all skills with domain info
+    const skills = await Skill.findAll({
+      attributes: [ 'skill_name'],
+      
+    });
+
+    res.json({
+      duration: durationOptions,
+      startMonth: allowedStartMonths,
+      perks: allowedPerks,
+      cities: allowedCities,
+      domains: domains,
+      skills: skills
+    });
+
+  } catch (error) {
+    console.error('Error fetching filters:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });

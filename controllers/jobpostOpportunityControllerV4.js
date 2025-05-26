@@ -1,4 +1,4 @@
-const { JobPost, UserSkill, User, CompanyRecruiterProfile } = require('../models');
+const { JobPost, UserSkill, User, CompanyRecruiterProfile, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 
@@ -162,13 +162,14 @@ exports.showCompanyWiseJobPosts = async (req, res) => {
     }
 
     // Find company recruiter profiles matching the company name (case-insensitive, partial match)
-    // Use Op.like instead of Op.iLike for MySQL compatibility
+    // Use Sequelize.fn and Op.like for case-insensitive search in MySQL
     const matchingCompanies = await CompanyRecruiterProfile.findAll({
-      where: {
-        companyName: {
-          [Op.like]: `%${companyNameQuery}%`
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('companyName')),
+        {
+          [Op.like]: `%${companyNameQuery.toLowerCase()}%`
         }
-      },
+      ),
       attributes: ['id', 'companyName', 'logoUrl']
     });
 
