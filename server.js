@@ -14,6 +14,7 @@ const assignmentRoutes = require('./routes/assignmentRoutes');
 const feedRoutes = require('./routes/feedRoutes');
 const skillRoutes = require('./routes/skillRoutes');
 const { Domain, Skill } = require('./models');  // Added import for Domain and Skill
+const universityRoutes = require('./routes/universitydetailRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +31,7 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/', jobpostRoute);
 app.use('/api/feed', feedRoutes);
 app.use('/api/skills', skillRoutes);
+app.use('/api',universityRoutes);
 
 const upload = multer({ dest: 'uploads/' });
 app.post('/upload-skill', upload.any(), uploadSkillController);
