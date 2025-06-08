@@ -344,7 +344,6 @@ async function updateAadhaarDetails(req, res) {
   }
 }
 
-// get public profile for the feed 
 const getPublicProfileByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -356,7 +355,7 @@ const getPublicProfileByUserId = async (req, res) => {
         'firstName', 'lastName', 'language', 'userType', 'aboutus',
         'careerObjective', 'userprofilepic', 'email', 
         'course', 'specialization',
-        'totalExperience', 'Standard'
+         'Standard'
       ],
       raw: true
     });
@@ -386,10 +385,22 @@ const getPublicProfileByUserId = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
 
+    // 4. User experiences
+    const userDetailRecord = await UserDetail.findOne({ where: { userId } });
+    let experiences = [];
+    if (userDetailRecord) {
+      experiences = await Experience.findAll({
+        where: { userDetailId: userDetailRecord.id },
+        attributes: ['companyRecruiterProfileId', 'totalExperience', 'currentJobRole', 'currentCompany', 'status'],
+        order: [['createdAt', 'DESC']]
+      });
+    }
+
     return res.status(200).json({
       publicProfile: userDetail,
       skills: userSkills,
-      activity: feedPosts
+      activity: feedPosts,
+      experiences: experiences
     });
   } catch (error) {
     console.error("Error fetching public profile:", error);
