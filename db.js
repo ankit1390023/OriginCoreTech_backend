@@ -1,8 +1,15 @@
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize('job', 'root', '', {
+const sequelize = new Sequelize('jobmain', 'root', '', {
   host: 'localhost',
-  dialect: 'mysql', 
+  dialect: 'mysql',
+  logging: false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  }
 });
 
 module.exports = sequelize;

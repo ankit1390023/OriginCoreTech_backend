@@ -4,9 +4,10 @@ const config = require('../jwtConfig');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
 const otpController = require('./otpController');
+
 exports.registerUser = async (req, res) => {
   const { firstName, lastName, email, phone, password, userRole } = req.body;
-
+  console.log(firstName, lastName, email, phone, password, userRole);
   try {
     const existing = await User.findOne({ where: { email } });
     if (existing) return res.status(409).json({ message: 'Email already exists' });

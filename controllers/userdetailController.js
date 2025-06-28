@@ -1,4 +1,4 @@
-const {  User, UserDetail, UserSkill, FeedPost, Experience } = require('../models');
+const { User, UserDetail, UserSkill, FeedPost, Experience } = require('../models');
 
 const { Op } = require('sequelize');
 
@@ -146,7 +146,7 @@ async function createUserDetails(req, res) {
 async function getUserDetailsByUserId(req, res) {
   try {
     const { userId } = req.params;
-    const userDetail = await UserDetail.findOne({ 
+    const userDetail = await UserDetail.findOne({
       where: { userId },
       include: [
         {
@@ -353,9 +353,9 @@ const getPublicProfileByUserId = async (req, res) => {
       where: { userId },
       attributes: [
         'firstName', 'lastName', 'language', 'userType', 'aboutus',
-        'careerObjective', 'userprofilepic', 'email', 
+        'careerObjective', 'userprofilepic', 'email',
         'course', 'specialization',
-         'Standard'
+        'Standard'
       ],
       raw: true
     });
@@ -410,9 +410,9 @@ const getPublicProfileByUserId = async (req, res) => {
 
 
 
-module.exports = { 
-  createUserDetails, 
-  getUserDetailsByUserId, 
+module.exports = {
+  createUserDetails,
+  getUserDetailsByUserId,
   updateUserDetailsByUserId,
   updateTermsAndCondition,
   getTermsAndCondition,

@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const multer = require('multer')
+const cors = require('cors');
 const sequelize = require('./db');
 const userRoutes = require('./routes/userRoutes');
 const otpRoutes = require('./routes/otpRoutes');
@@ -17,13 +18,19 @@ const { Domain, Skill } = require('./models');  // Added import for Domain and S
 const universityRoutes = require('./routes/universitydetailRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
+
+// Enable CORS for frontend
+app.use(cors({
+  origin: '*',
+  credentials: true
+}));
 
 app.use(bodyParser.json());
 
-app.use('/api/users', userRoutes);  
-app.use('/api/otp', otpRoutes);  
-app.use('/api/mobileotp',otpmobileRoutes);   
+app.use('/api/users', userRoutes);
+app.use('/api/otp', otpRoutes);
+app.use('/api/mobileotp', otpmobileRoutes);
 app.use('/api/user-details', userDetailRoutes);
 app.use('/api/company-recruiter', companyRecruiterProfileRoutes);
 app.use('/api/interview-invitations', interviewInvitationRoutes);
@@ -31,7 +38,7 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/', jobpostRoute);
 app.use('/api/feed', feedRoutes);
 app.use('/api/skills', skillRoutes);
-app.use('/api',universityRoutes);
+app.use('/api', universityRoutes);
 
 const upload = multer({ dest: 'uploads/' });
 app.post('/upload-skill', upload.any(), uploadSkillController);
@@ -42,7 +49,7 @@ app.post('/upload-skill', upload.any(), uploadSkillController);
     await sequelize.authenticate();  // Authenticating with the database
     console.log('Database connected.');
 
-    // alter
+    // Changed from alter: true to just sync() to avoid "too many keys" error
     await sequelize.sync();
 
     app.listen(PORT, () => {
@@ -70,6 +77,7 @@ const allowedJobRoles = [
   'UI/UX Designer'
 ];
 
+const allowedUserTypes = ['Student', 'Company', 'University'];
 
 const allowedCourses = ['B.Tech', 'M.Tech', 'BBA', 'MBA', 'MCA', 'Diploma', 'B.Sc', 'BA', 'BE'];
 const allowedSpecializations = ['Computer Science', 'Electronics', 'Civil', 'Mechanical', 'IT', 'AI/ML'];
@@ -104,7 +112,7 @@ const durationOptions =
   ['Permanent', '6 Months', '3 Months', '4 Months', '2 Months'];
 
 const allowedStartMonths = ['January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'];
+  'July', 'August', 'September', 'October', 'November', 'December'];
 const allowedPerks = [
   'Certificate',
   'Letter of recommendation',
@@ -114,19 +122,19 @@ const allowedPerks = [
   'Free snacks & beverages',
   'Pre-placement offer (PPO)'
 ];
-const allowedCities = [ 'Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', 'Kolkata'];
+const allowedCities = ['Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', 'Kolkata'];
 
 app.get('/api/internship-filters', async (req, res) => {
   try {
     // Get all domains
     const domains = await Domain.findAll({
-      attributes: [ 'domain_name']
+      attributes: ['domain_name']
     });
 
     // Get all skills with domain info
     const skills = await Skill.findAll({
-      attributes: [ 'skill_name'],
-      
+      attributes: ['skill_name'],
+
     });
 
     res.json({

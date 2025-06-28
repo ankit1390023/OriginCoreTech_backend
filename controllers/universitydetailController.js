@@ -52,8 +52,7 @@ const updateUniversityDetail = async (req, res) => {
   try {
     const userId = req.user.id; // Assuming user id is available in req.user
     const user = await User.findByPk(userId);
-    if (!user || user.userRole !== 'UNIVERSITY') {
-      return res.status(403).json({ message: 'User is not authorized as UNIVERSITY' });
+    if (!user || user.userRole !== 'UNIVERSITY') { return res.status(403).json({ message: 'User is not authorized as UNIVERSITY' });
     }
 
     const universityDetail = await UniversityDetail.findOne({ where: { userId } });
