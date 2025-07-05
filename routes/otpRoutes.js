@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const otpController = require('../controllers/otpController');
+const { otpLimiter, sendOtp, verifyOtp } = require('../controllers/otpController');
 
-router.get('/auth', otpController.authUrl);
-router.get('/oauth2callback', otpController.oauth2callback);
-router.post('/send-otp', otpController.sendOtp);
-router.post('/verify-otp', otpController.verifyOtp);
+
+router.post('/send-otp', otpLimiter, sendOtp);
+router.post('/verify-otp', otpLimiter, verifyOtp);
 
 module.exports = router;

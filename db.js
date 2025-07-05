@@ -1,7 +1,8 @@
-const { Sequelize } = require('sequelize');
+ const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize('jobmain', 'root', '', {
   host: 'localhost',
+  port: 3306,
   dialect: 'mysql',
   logging: false,
   pool: {
@@ -12,4 +13,4 @@ const sequelize = new Sequelize('jobmain', 'root', '', {
   }
 });
 
-module.exports = sequelize;
+module.exports = sequelize;  

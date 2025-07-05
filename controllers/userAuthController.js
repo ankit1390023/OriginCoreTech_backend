@@ -1,4 +1,4 @@
-const { User, UserDetail } = require('../models'); 
+const { User, UserDetail } = require('../models');
 const jwt = require('jsonwebtoken');
 const config = require('../jwtConfig');
 const { Op } = require('sequelize');
@@ -24,15 +24,31 @@ exports.registerUser = async (req, res) => {
     }
 
     // Encrypt password before saving
-    
 
-    const user = await User.create({ 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      password: password, 
-      userRole 
+
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      phone,
+      password: password,
+      userRole
+    });
+
+    // Create a basic UserDetail record for email verification
+    await UserDetail.create({
+      userId: user.id,
+      firstName,
+      lastName,
+      email,
+      phone,
+      dob: '1900-01-01', // Default date for required field
+      gender: 'Not Specified', // Default value for required field
+      userType: 'Not Specified', // Default value for required field
+      isEmailVerified: false,
+      isPhoneVerified: false,
+      isGstVerified: false,
+      termsAndCondition: false
     });
 
     res.status(201).json({ message: 'User registered', user: { id: user.id, email: user.email } });
@@ -56,7 +72,7 @@ exports.loginUser = async (req, res) => {
     }
 
     //  Compare password with hashed password in DB
-    const isPasswordValid =  bcrypt.compare(password,user.password)
+    const isPasswordValid = bcrypt.compare(password, user.password)
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -76,7 +92,8 @@ exports.loginUser = async (req, res) => {
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ message: 'Internal server error' });
-  }}
+  }
+}
 
 // get user 
 exports.getUserDetailsByEmail = async (req, res) => {
@@ -143,8 +160,8 @@ exports.changeEmail = async (req, res) => {
 
 // Change Password API
 exports.changePassword = async (req, res) => {
-  const {oldPassword, newPassword } = req.body;
-  
+  const { oldPassword, newPassword } = req.body;
+
 
   if (!oldPassword || !newPassword) {
     return res.status(400).json({ message: 'User ID, old password, and new password are required.' });
@@ -157,10 +174,10 @@ exports.changePassword = async (req, res) => {
     if (!user || user.isDeleted) {
       return res.status(404).json({ message: 'User not found or account deleted.' });
     }
-    console.log({oldPassword})
+    console.log({ oldPassword })
     console.log(user.password)
-    const isMatch = bcrypt.compare(oldPassword,user.password)
-   
+    const isMatch = bcrypt.compare(oldPassword, user.password)
+
     if (!isMatch) {
       return res.status(401).json({ message: 'Old password is incorrect.' });
     }
@@ -229,41 +246,77 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+// Utility function to verify OTP without HTTP response
+const verifyOtpUtility = async (email, otp) => {
+  const otpStore = require('../utils/otpStore');
+  const { User, UserDetail } = require('../models');
+
+  const record = otpStore[email];
+
+  if (!record) {
+    throw new Error('No OTP found for this email');
+  }
+
+  if (Date.now() > record.expiresAt) {
+    delete otpStore[email];
+    throw new Error('OTP expired');
+  }
+
+  if (record.otp !== otp) {
+    throw new Error('Invalid OTP');
+  }
+
+  delete otpStore[email];
+
+  // Find user by email
+  const user = await User.findOne({ where: { email } });
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Find user detail by userId
+  let userDetail = await UserDetail.findOne({ where: { userId: user.id } });
+
+  // If UserDetail doesn't exist, create a basic one
+  if (!userDetail) {
+    userDetail = await UserDetail.create({
+      userId: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      dob: '1900-01-01', // Default date for required field
+      gender: 'Not Specified', // Default value for required field
+      userType: 'Not Specified', // Default value for required field
+      isEmailVerified: false,
+      isPhoneVerified: false,
+      isGstVerified: false,
+      termsAndCondition: false
+    });
+  }
+
+  // Update email verification status
+  userDetail.isEmailVerified = true;
+  await userDetail.save();
+
+  return {
+    message: 'OTP verified successfully',
+    emailVerified: true,
+    userRole: user.userRole
+  };
+};
+
 // Reset Password with OTP verification
 exports.resetPasswordWithOtp = async (req, res) => {
+  // console.log("hi  bro i am here")
   const { email, otp, newPassword } = req.body;
   if (!email || !otp || !newPassword) {
     return res.status(400).json({ message: 'Email, OTP and new password are required' });
   }
-
+  // console.log(req.body)
   try {
-    // Verify OTP by calling otpController.verifyOtp
-    // Since verifyOtp expects req and res, we create mock objects with promise support
-
-    const mockReq = { body: { email, otp } };
-    let otpVerified = false;
-    const mockRes = {
-      status: (code) => ({
-        json: (obj) => {
-          if (code === 200 && obj.message.includes('verified')) {
-            otpVerified = true;
-          }
-          return { code, obj };
-        },
-      }),
-      json: (obj) => {
-        if (obj.message.includes('verified')) {
-          otpVerified = true;
-        }
-        return { code: 200, obj };
-      },
-    };
-
-    otpController.verifyOtp(mockReq, mockRes);
-
-    if (!otpVerified) {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
-    }
+    // Verify OTP using utility function
+    await verifyOtpUtility(email, otp);
 
     // OTP verified, update password
     const user = await User.findOne({ where: { email } });
@@ -276,6 +329,9 @@ exports.resetPasswordWithOtp = async (req, res) => {
     res.status(200).json({ message: 'Password reset successfully' });
   } catch (error) {
     console.error('Reset password error:', error);
+    if (error.message.includes('OTP') || error.message.includes('User not found')) {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: 'Internal server error' });
   }
 };

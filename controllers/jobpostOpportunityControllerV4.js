@@ -43,15 +43,15 @@ exports.getOpportunities = async (req, res) => {
       // Calculate hiringStatus
       const hiringStatus = job.numberOfOpenings > 0 ? "Actively Hiring" : "Closed";
 
-    // Calculate postedDaysAgo from createdAt
-    const postedDate = job.createdAt;
-    const diffTime = Math.abs(currentDate - postedDate);
-    let postedDaysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    if (postedDaysAgo === 0) {
-      postedDaysAgo = "Today";
-    } else {
-      postedDaysAgo = postedDaysAgo.toString();
-    }
+      // Calculate postedDaysAgo from createdAt
+      const postedDate = job.createdAt;
+      const diffTime = Math.abs(currentDate - postedDate);
+      let postedDaysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (postedDaysAgo === 0) {
+        postedDaysAgo = "Today";
+      } else {
+        postedDaysAgo = postedDaysAgo.toString();
+      }
 
       // Experience - using candidatePreferences as placeholder (adjust if needed)
       const experience = job.candidatePreferences || "";
@@ -92,15 +92,38 @@ exports.getJobDetails = async (req, res) => {
       include: [
         {
           model: CompanyRecruiterProfile,
-          attributes: ['companyName', 'logoUrl', 'about'],
+          attributes: [
+            'companyName',
+            'logoUrl',
+            'about',
+            'industry',
+            'location',
+            'recruiterName',
+            'recruiterEmail',
+            'recruiterPhone',
+            'designation',
+            'hiringPreferences',
+            'languagesKnown',
+            'isEmailVerified',
+            'isPhoneVerified',
+            'isGstVerified',
+            'profilePic'
+          ],
           required: false
         }
       ]
     });
 
+ 
     if (!job) {
       return res.status(404).json({ message: "Job not found." });
     }
+
+    // Get number of applications for this job
+    const { Application } = require('../models');
+    const numberOfApplicants = await Application.count({
+      where: { jobPostId: jobId }
+    });
 
     const currentDate = new Date();
 
@@ -111,40 +134,109 @@ exports.getJobDetails = async (req, res) => {
     const postedDate = job.createdAt;
     const diffTime = Math.abs(currentDate - postedDate);
     let postedDaysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-     if (postedDaysAgo === 0) {
+    if (postedDaysAgo === 0) {
       postedDaysAgo = "Today";
+    } else if (postedDaysAgo === 1) {
+      postedDaysAgo = "1 day ago";
     } else {
-      postedDaysAgo = postedDaysAgo.toString();
+      postedDaysAgo = `${postedDaysAgo} days ago`;
     }
 
+    // Parse skills required into array
+    const skillsRequired = job.skillsRequired ? job.skillsRequired.split(',').map(s => s.trim()) : [];
 
-    // Experience - using candidatePreferences as placeholder (adjust if needed)
-    const experience = job.candidatePreferences || "";
-
-    // Salary - using stipendMin and stipendMax
+    // Format salary information
     const salary = job.stipendMin && job.stipendMax ? `${job.stipendMin} - ${job.stipendMax}` : "";
+    const stipendType = job.stipendType || "";
+    const incentivePerYear = job.incentivePerYear || "";
 
-    // Location
-    const location = job.jobLocation || "";
+    // Format internship dates
+    const internshipDuration = job.internshipDuration || "";
+    const internshipStartDate = job.internshipStartDate || "";
+    const internshipFromDate = job.internshipFromDate || "";
+    const internshipToDate = job.internshipToDate || "";
+    const isCustomInternshipDate = job.isCustomInternshipDate || false;
 
-    // Number of applicants - assuming job.applicantsCount field or count from another model (not implemented here)
-    const numberOfApplicants = job.applicantsCount || 0;
+    // Format perks
+    const perks = job.perks ? job.perks.split(',').map(p => p.trim()) : [];
 
-    // User role (intern responsibility) - assuming job.internResponsibility field
-    const userRole = job.jobDescription || "";
+    // Format screening questions
+    const screeningQuestions = job.screeningQuestions ? job.screeningQuestions.split('\n').filter(q => q.trim()) : [];
 
     return res.status(200).json({
+      // Basic Job Information
+      jobId: job.jobId,
+      opportunityType: job.opportunityType,
+      jobType: job.jobType,
       jobProfile: job.jobProfile,
+      jobDescription: job.jobDescription,
+      jobTime: job.jobTime,
+      daysInOffice: job.daysInOffice,
+
+      // Location Information
+      jobLocation: job.jobLocation,
+      cityChoice: job.cityChoice,
+
+      // Requirements and Preferences
+      skillsRequired: skillsRequired,
+      skillRequiredNote: job.skillRequiredNote,
+      candidatePreferences: job.candidatePreferences,
+      womenPreferred: job.womenPreferred,
+
+      // Company Information
       companyName: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.companyName : "",
       logoUrl: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.logoUrl : "",
       aboutCompany: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.about : "",
-      hiringStatus,
-      postedDaysAgo,
-      experience,
-      salary,
-      location,
-      numberOfApplicants,
-      userRole,
+      companyIndustry: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.industry : "",
+      companyLocation: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.location : "",
+
+      // Recruiter Information
+      recruiterName: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.recruiterName : "",
+      recruiterEmail: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.recruiterEmail : "",
+      recruiterPhone: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.recruiterPhone : "",
+      recruiterDesignation: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.designation : "",
+      recruiterProfilePic: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.profilePic : "",
+
+      // Company Verification Status
+      isEmailVerified: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.isEmailVerified : false,
+      isPhoneVerified: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.isPhoneVerified : false,
+      isGstVerified: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.isGstVerified : false,
+
+      // Hiring Information
+      numberOfOpenings: job.numberOfOpenings,
+      hiringStatus: hiringStatus,
+      hiringPreferences: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.hiringPreferences : "",
+      languagesKnown: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.languagesKnown : "",
+
+      // Compensation Details
+      salary: salary,
+      stipendType: stipendType,
+      incentivePerYear: incentivePerYear,
+      perks: perks,
+
+      // Internship Details
+      internshipDuration: internshipDuration,
+      internshipStartDate: internshipStartDate,
+      internshipFromDate: internshipFromDate,
+      internshipToDate: internshipToDate,
+      isCustomInternshipDate: isCustomInternshipDate,
+
+      // Academic Requirements
+      collegeName: job.collegeName,
+      course: job.course,
+
+      // Contact Information
+      phoneContact: job.phoneContact,
+      alternatePhoneNumber: job.alternatePhoneNumber,
+
+      // Application Process
+      screeningQuestions: screeningQuestions,
+
+      // Statistics
+      numberOfApplicants: numberOfApplicants,
+
+      postedDaysAgo: postedDaysAgo,
+
     });
 
   } catch (error) {
