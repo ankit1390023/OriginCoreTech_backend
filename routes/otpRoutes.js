@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sendOtp, verifyOtp } = require('../controllers/otpController');
-const { otpLimiter } = require('../middleware/OtpLimitter');
+const { otpLimiter } = require('../middleware/OtpLimitterMiddleware');
 
 
 router.post('/send-otp', otpLimiter, sendOtp);
