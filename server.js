@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 5000;
 
 // Enable CORS for frontend
 app.use(cors({
-  origin: '*',
+  origin: [process.env.FRONTEND_URL || 'https://origin-core-tech-job-frontend.vercel.app', 'http://localhost:5174'],
   credentials: true
 }));
 

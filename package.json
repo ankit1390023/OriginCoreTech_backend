@@ -7,7 +7,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -20,6 +21,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.2",
     "mysql2": "^3.14.1",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4",
     "nodemailer": "^7.0.2",
     "open": "^10.1.2",
     "sequelize": "^6.37.7",
