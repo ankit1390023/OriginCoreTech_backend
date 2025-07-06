@@ -15,7 +15,16 @@ const sequelize = new Sequelize(
       min: 0,
       acquire: 30000,
       idle: 10000
-    }
+    },
+    // Add SSL configuration for PostgreSQL cloud databases
+    ...(process.env.DB_DIALECT === 'postgres' && {
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      }
+    })
   }
 );
 
