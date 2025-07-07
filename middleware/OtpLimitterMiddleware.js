@@ -1,3 +1,4 @@
+const otpStore = require('../utils/otpStore');
 // Rate limiting middleware for OTP requests
 exports.otpLimiter = (req, res, next) => {
     const { email } = req.body;
