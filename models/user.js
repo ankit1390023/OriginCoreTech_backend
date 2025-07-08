@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 
 module.exports = (sequelize) => {
   const User = sequelize.define('User', {
-   
+
     firstName: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -37,7 +37,7 @@ module.exports = (sequelize) => {
       defaultValue: 1, // 1 means profile incomplete, 0 means complete
     }
   }, {
-tableName: 'users',
+    tableName: 'users',
     timestamps: true,
     hooks: {
       beforeCreate: async (user) => {
@@ -68,8 +68,8 @@ tableName: 'users',
       onDelete: 'CASCADE'
     });
     User.hasMany(models.UserSkill, {
-      foreignKey: 'userId', 
-      sourceKey: 'id', 
+      foreignKey: 'userId',
+      sourceKey: 'id',
       onDelete: 'CASCADE',
     });
 
@@ -80,22 +80,22 @@ tableName: 'users',
 
     User.hasMany(models.FeedPost, { foreignKey: 'userId', onDelete: 'CASCADE' });
 
-      User.belongsToMany(models.User, {
-    through: models.Follow,
-    as: 'Followers',
-    foreignKey: 'followedId',
-    otherKey: 'followerId'
-  });
-  User.belongsToMany(models.User, {
-    through: models.Follow,
-    as: 'Following',
-    foreignKey: 'followerId',
-    otherKey: 'followedId'
-  });
+    User.belongsToMany(models.User, {
+      through: models.Follow,
+      as: 'Followers',
+      foreignKey: 'followedId',
+      otherKey: 'followerId'
+    });
+    User.belongsToMany(models.User, {
+      through: models.Follow,
+      as: 'Following',
+      foreignKey: 'followerId',
+      otherKey: 'followedId'
+    });
 
 
   };
-    
+
 
 
 

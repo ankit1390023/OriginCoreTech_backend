@@ -95,7 +95,7 @@ exports.getAllDomains = async (req, res) => {
       attributes: ['domain_name']
     });
     const domainNames = domains.map(domain => domain.domain_name);
-   return res.status(200).json({"domains":domainNames});
+    return res.status(200).json({ "domains": domainNames });
   } catch (error) {
     console.error("Error fetching domains:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -200,7 +200,7 @@ exports.updateApplicationStatus = async (req, res) => {
     }
 
     // Validate status value
-    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList','NotInterested','Send Assignment'];
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired', 'ShortList', 'NotInterested', 'Send Assignment'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
     }
@@ -273,7 +273,7 @@ exports.getCandidatesByStatus = async (req, res) => {
     const status = req.params.status;
 
     // Validate status value
-    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired','ShortList','NotInterested','Send Assignment'];
+    const allowedStatuses = ['Applied', 'Screening', 'Interview', 'Offered', 'Hired', 'ShortList', 'NotInterested', 'Send Assignment'];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: `Invalid status value. Allowed values are: ${allowedStatuses.join(', ')}` });
     }
@@ -533,7 +533,7 @@ exports.getPendingTasksgroupbystatus = async (req, res) => {
       },
       order: [['createdAt', 'DESC']]
     });
-    
+
     const resumeReview = [];
     const interviewToSchedule = [];
     const offerLetterPending = [];
@@ -552,15 +552,15 @@ exports.getPendingTasksgroupbystatus = async (req, res) => {
     return res.status(200).json({
       resumeReview: {
         count: resumeReview.length,
-      
+
       },
       interviewToSchedule: {
         count: interviewToSchedule.length,
-        
+
       },
       offerLetterPending: {
         count: offerLetterPending.length,
-       
+
       }
     });
 
@@ -579,7 +579,7 @@ exports.getPendingTasksgroupbystatus = async (req, res) => {
 exports.getviewPendingTasksgroupbystatus = async (req, res) => {
   try {
     const userId = req.user?.id;
-    const statusParam = req.params.status?.trim(); 
+    const statusParam = req.params.status?.trim();
 
     const validStatuses = ["Applied", "ShortList", "Hired"];
 

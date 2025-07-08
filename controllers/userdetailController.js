@@ -1,4 +1,4 @@
-const {  User, UserDetail, UserSkill, FeedPost, Experience } = require('../models');
+const { User, UserDetail, UserSkill, FeedPost, Experience } = require('../models');
 
 const { Op } = require('sequelize');
 
@@ -34,7 +34,7 @@ async function createUserDetails(req, res) {
       experiences // new field for multiple experiences
     } = req.body;
 
-    console.log('Received user detail data:', req.body);
+    // console.log('Received user detail data:', req.body);
 
     if (!email || !firstName || !lastName || !phone || !dob || !userType || !gender) {
       return res.status(400).json({ message: "Required fields are missing." });
@@ -146,7 +146,7 @@ async function createUserDetails(req, res) {
 async function getUserDetailsByUserId(req, res) {
   try {
     const { userId } = req.params;
-    const userDetail = await UserDetail.findOne({ 
+    const userDetail = await UserDetail.findOne({
       where: { userId },
       include: [
         {
@@ -201,11 +201,11 @@ async function updateUserDetailsByUserId(req, res) {
     // Update experiences if provided
     if (Array.isArray(experiences) && experiences.length > 0) {
       const Experience = require('../models').Experience;
-      console.log('Existing experiences for userDetailId:', userDetail.id);
+      // console.log('Existing experiences for userDetailId:', userDetail.id);
       const allExperiences = await Experience.findAll({ where: { userDetailId: userDetail.id } });
       console.log('All experiences:', allExperiences.map(e => e.toJSON()));
       for (const exp of experiences) {
-        console.log('Updating experience:', exp);
+        // console.log('Updating experience:', exp);
         if (exp.id) {
           // Update existing experience
           const existingExp = await Experience.findByPk(exp.id);
@@ -245,7 +245,7 @@ async function updateUserDetailsByUserId(req, res) {
               exp.status = 'pending';
             }
             await existingExp.update(exp);
-            console.log('Updated experience by fields:', existingExp);
+            // console.log('Updated experience by fields:', existingExp);
           } else {
             console.log('Experience not found by fields, skipping update:', exp);
           }
@@ -353,9 +353,9 @@ const getPublicProfileByUserId = async (req, res) => {
       where: { userId },
       attributes: [
         'firstName', 'lastName', 'language', 'userType', 'aboutus',
-        'careerObjective', 'userprofilepic', 'email', 
+        'careerObjective', 'userprofilepic', 'email',
         'course', 'specialization',
-         'Standard'
+        'Standard'
       ],
       raw: true
     });
@@ -410,9 +410,9 @@ const getPublicProfileByUserId = async (req, res) => {
 
 
 
-module.exports = { 
-  createUserDetails, 
-  getUserDetailsByUserId, 
+module.exports = {
+  createUserDetails,
+  getUserDetailsByUserId,
   updateUserDetailsByUserId,
   updateTermsAndCondition,
   getTermsAndCondition,

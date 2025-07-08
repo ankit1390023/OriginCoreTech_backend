@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const config = require('../jwtConfig');
 
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -13,7 +12,7 @@ const authMiddleware = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, config.jwtSecret);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;  // Fix: set req.user to decoded token payload
     next();
   } catch (err) {

@@ -67,7 +67,7 @@ const Application = sequelize.define('Application', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-   status: {
+  status: {
     type: DataTypes.STRING,
     allowNull: false,
   },
@@ -79,7 +79,6 @@ const Application = sequelize.define('Application', {
   tableName: 'applications',
   timestamps: true,
 });
-
 Application.associate = (models) => {
   Application.belongsTo(models.JobPost, { foreignKey: 'jobPostId' });
   Application.hasMany(models.InterviewInvitation, { foreignKey: 'applicationId' });
