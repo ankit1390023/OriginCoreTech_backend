@@ -1,0 +1,34 @@
+{
+  "name": "jobackend",
+  "version": "1.0.0",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "googleapis": "^148.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2",
+    "mysql2": "^3.14.1",
+    "nodemailer": "^7.0.2",
+    "open": "^10.1.2",
+    "sequelize": "^6.37.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://diksha3@bitbucket.org/rishabh6363/jobnodeapi.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://bitbucket.org/rishabh6363/jobnodeapi/issues"
+  },
+  "homepage": "https://bitbucket.org/rishabh6363/jobnodeapi#readme",
+  "description": ""
+}
