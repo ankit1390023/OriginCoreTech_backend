@@ -100,7 +100,7 @@ app.get('/api/internship-filters', async (req, res) => {
     await sequelize.authenticate();
     console.log('✅ Database connected');
 
-    await sequelize.sync(); // You can use { alter: true } if needed
+    //await sequelize.sync(); // You can use { alter: true } if needed
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
