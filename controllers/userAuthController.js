@@ -6,7 +6,7 @@ const otpController = require('./otpController');
 
 exports.registerUser = async (req, res) => {
   const { firstName, lastName, email, phone, password, userRole } = req.body;
-  console.log(firstName, lastName, email, phone, password, userRole);
+  // console.log(firstName, lastName, email, phone, password, userRole);
   try {
     const existing = await User.findOne({ where: { email } });
     if (existing) return res.status(409).json({ message: 'Email already exists' });
@@ -64,7 +64,7 @@ exports.loginUser = async (req, res) => {
   try {
     // Find user by email
     const user = await User.findOne({ where: { email } });
-    console.log('User found:', user);
+    
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -166,15 +166,15 @@ exports.changePassword = async (req, res) => {
     return res.status(400).json({ message: 'User ID, old password, and new password are required.' });
   }
   const userId = req.user.id
-  console.log(req.body);
-  console.log(req.user)
+  // console.log(req.body);
+  // console.log(req.user)
   try {
     const user = await User.findByPk(userId);
     if (!user || user.isDeleted) {
       return res.status(404).json({ message: 'User not found or account deleted.' });
     }
-    console.log({ oldPassword })
-    console.log(user.password)
+    // console.log({ oldPassword })
+    // console.log(user.password)
     const isMatch = bcrypt.compare(oldPassword, user.password)
 
     if (!isMatch) {

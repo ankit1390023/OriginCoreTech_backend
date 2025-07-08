@@ -98,7 +98,7 @@ app.get('/api/internship-filters', async (req, res) => {
 (async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Database connected to Clever Cloud MySQL');
+    console.log('✅ Database connected');
 
     await sequelize.sync(); // You can use { alter: true } if needed
 

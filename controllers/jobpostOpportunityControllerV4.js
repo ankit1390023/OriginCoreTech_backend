@@ -22,12 +22,12 @@ exports.getOpportunities = async (req, res) => {
       include: [
         {
           model: CompanyRecruiterProfile,
-          attributes: ['companyName', 'logoUrl'],
+          attributes: ['companyName', 'logoUrl', 'location'],
           required: false
         }
       ]
     });
-
+    // console.log("jobPosts", jobPosts);
     const currentDate = new Date();
 
     const opportunities = jobPosts.map(job => {
@@ -59,15 +59,19 @@ exports.getOpportunities = async (req, res) => {
       // Salary - using stipendMin and stipendMax
       const salary = job.stipendMin && job.stipendMax ? `${job.stipendMin} - ${job.stipendMax}` : "";
 
+      //location 
+
       return {
+        jobId: job.jobId,
         jobProfile: job.jobProfile,
         companyName: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.companyName : "",
         logoUrl: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.logoUrl : "",
+        location: job.CompanyRecruiterProfile ? job.CompanyRecruiterProfile.location : "",
         hiringStatus,
         postedDaysAgo,
         matchPercentage: Math.round(matchPercentage),
         experience,
-        salary
+        salary,
       };
     });
 
@@ -114,7 +118,7 @@ exports.getJobDetails = async (req, res) => {
       ]
     });
 
- 
+
     if (!job) {
       return res.status(404).json({ message: "Job not found." });
     }

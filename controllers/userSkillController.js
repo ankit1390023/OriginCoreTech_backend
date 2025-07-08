@@ -4,8 +4,8 @@ const { UserSkill } = require('../models');
 
 const uploadSkillController = async (req, res) => {
   try {
-    console.log(req.body)
-    console.log(req.files)
+    // console.log(req.body)
+    // console.log(req.files)
     const { user_id } = req.body;
     const skills = JSON.parse(req.body.skills); 
 
