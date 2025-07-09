@@ -78,15 +78,17 @@ const allowedCities = ['Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', '
 app.get('/api/internship-filters', async (req, res) => {
   try {
     const domains = await Domain.findAll({ attributes: ['domain_name'] });
+    const domainsNames = domains.map(domain => domain.domain_name);
     const skills = await Skill.findAll({ attributes: ['skill_name'] });
+    const skillNames = skills.map(skill => skill.skill_name);
 
     res.json({
       duration: durationOptions,
       startMonth: allowedStartMonths,
       perks: allowedPerks,
       cities: allowedCities,
-      domains,
-      skills
+      domains: domainsNames,
+      skills: skillNames
     });
   } catch (error) {
     console.error('Error fetching filters:', error);
