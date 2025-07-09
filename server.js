@@ -23,16 +23,16 @@ const { Domain, Skill } = require('./models'); // Sequelize models
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ CORS Setup
+//  CORS Setup
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
   credentials: true,
 }));
 
-// ✅ Middleware
+//  Middleware
 app.use(bodyParser.json());
 
-// ✅ API Routes
+//  API Routes
 app.use('/api/users', userRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/mobileotp', otpmobileRoutes);
