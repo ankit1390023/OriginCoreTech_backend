@@ -3,14 +3,16 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const cors = require('cors');
+const path = require('path');
 const sequelize = require('./db');
+const fs = require('fs'); // Added for file existence check
 
 // Route Imports
 const userRoutes = require('./routes/userRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const otpmobileRoutes = require('./routes/otpmobileroute');
 const userDetailRoutes = require('./routes/userdetailRoutes');
-const uploadSkillController = require('./controllers/userSkillController');
+const { uploadSkillController, getUserSkillsController } = require('./controllers/userSkillController');
 const jobpostRoute = require('./routes/jobpostroute');
 const companyRecruiterProfileRoutes = require('./routes/companyRecruiterProfileRoutes');
 const interviewInvitationRoutes = require('./routes/interviewInvitationRoutes');
@@ -45,16 +47,71 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api', universityRoutes);
 
-// ✅ File upload
+//  File upload
 const upload = multer({ dest: 'uploads/' });
-app.post('/upload-skill', upload.any(), uploadSkillController);
+app.post('/api/upload-skill', upload.any(), uploadSkillController);
 
-// ✅ Health Check
+// Get user skills with certificate URLs
+app.get('/api/user-skills/:userId', getUserSkillsController);
+
+//  Test database connection
+app.get('/api/test-db', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.json({ message: 'Database connection successful' });
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
+
+//  Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, path) => {
+    // Set proper MIME types for different file types
+    if (path.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+    } else if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (path.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (path.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    }
+    // Allow cross-origin requests for certificate files
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+}));
+
+//  Specific route for certificate files with better error handling
+app.get('/certificates/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, 'uploads', 'certificates', filename);
+
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Certificate file not found' });
+  }
+
+  // Set proper headers based on file extension
+  const ext = path.extname(filename).toLowerCase();
+  if (ext === '.pdf') {
+    res.setHeader('Content-Type', 'application/pdf');
+  } else if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+    res.setHeader('Content-Type', `image/${ext.slice(1)}`);
+  }
+
+  res.sendFile(filePath);
+});
+
+//Health Check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'Server is running' });
 });
 
-// ✅ Static Filters APIs
+// Static Filters APIs
 const allowedJobRoles = ['Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Data Scientist', 'DevOps Engineer', 'UI/UX Designer'];
 const allowedLocations = ['Bengaluru', 'Hyderabad', 'Pune', 'Chennai', 'Gurugram', 'Noida', 'Delhi NCR'];
 const allowedUserTypes = ['Student', 'Company', 'University'];
@@ -69,7 +126,7 @@ app.get('/api/courses', (req, res) => res.json(allowedCourses));
 app.get('/api/specializations', (req, res) => res.json(allowedSpecializations));
 app.get('/api/colleges', (req, res) => res.json(allowedColleges));
 
-// ✅ Internship Filter with Skills + Domains
+// Internship Filter with Skills + Domains
 const durationOptions = ['Permanent', '6 Months', '3 Months', '4 Months', '2 Months'];
 const allowedStartMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const allowedPerks = ['Certificate', 'Letter of recommendation', 'Flexible work hours', '5 days a week', 'Informal dress code', 'Free snacks & beverages', 'Pre-placement offer (PPO)'];
@@ -80,13 +137,19 @@ app.get('/api/internship-filters', async (req, res) => {
     const domains = await Domain.findAll({ attributes: ['domain_name'] });
     const skills = await Skill.findAll({ attributes: ['skill_name'] });
 
+    // Transform domains and skills to simple arrays
+    const domainNames = domains.map(domain => domain.domain_name);
+    const skillNames = skills.map(skill => skill.skill_name);
+
     res.json({
       duration: durationOptions,
       startMonth: allowedStartMonths,
       perks: allowedPerks,
-      cities: allowedCities,
-      domains,
-      skills
+      cities: allowedCities.sort(),
+      domains: domainNames.sort(),
+      skills: skillNames.sort(),
+      courses: allowedCourses,
+      colleges: allowedColleges
     });
   } catch (error) {
     console.error('Error fetching filters:', error);
@@ -94,7 +157,7 @@ app.get('/api/internship-filters', async (req, res) => {
   }
 });
 
-// ✅ Sequelize Connect + Start Server
+// Sequelize Connect + Start Server
 (async () => {
   try {
     await sequelize.authenticate();
