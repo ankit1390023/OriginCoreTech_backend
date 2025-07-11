@@ -1,17 +1,33 @@
 const multer = require('multer');
 const path = require('path');
-const { User, CompanyRecruiterProfile,JobPost, } = require('../models');
+const { User, CompanyRecruiterProfile, JobPost, } = require('../models');
 const Application = require('../models/application');
 const { Op, fn, col, literal, Sequelize } = require('sequelize');
 const { Experience } = require('../models');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/profilePics/');
+    // Create different folders for different file types
+    if (file.fieldname === 'profilePic') {
+      cb(null, 'uploads/profilePics/');
+    } else if (file.fieldname === 'logoUrl') {
+      cb(null, 'uploads/logos/');
+    } else {
+      cb(null, 'uploads/');
+    }
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname);
-    cb(null, 'profile_' + req.user.id + '_' + Date.now() + ext);
+    const timestamp = Date.now();
+    const userId = req.user ? req.user.id : 'unknown';
+
+    if (file.fieldname === 'profilePic') {
+      cb(null, 'profile_' + userId + '_' + timestamp + ext);
+    } else if (file.fieldname === 'logoUrl') {
+      cb(null, 'logo_' + userId + '_' + timestamp + ext);
+    } else {
+      cb(null, file.fieldname + '_' + userId + '_' + timestamp + ext);
+    }
   }
 });
 
@@ -28,11 +44,30 @@ const upload = multer({
       cb(new Error('Only images are allowed'));
     }
   }
-}).single('profilePic');
+}).fields([
+  { name: 'profilePic', maxCount: 1 },
+  { name: 'logoUrl', maxCount: 1 }
+]);
+
+// Error handling middleware for multer
+const handleUploadError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File too large. Maximum size is 5MB.' });
+    }
+    return res.status(400).json({ message: 'File upload error: ' + err.message });
+  } else if (err) {
+    return res.status(400).json({ message: err.message });
+  }
+  next();
+};
 
 const createProfile = async (req, res) => {
   try {
     const userId = req.user.id;
+
+    console.log('Create Profile - Request Body:', req.body);
+    console.log('Create Profile - Files:', req.files);
 
     if (!req.body) {
       return res.status(400).json({ message: 'Request body is missing' });
@@ -61,14 +96,30 @@ const createProfile = async (req, res) => {
       industry,
       location,
       about,
-      logoUrl,
+      logoUrl: logoUrlFromBody,
+      profilePic: profilePicFromBody,
       hiringPreferences,
       languagesKnown,
       isEmailVerified,
       isPhoneVerified,
       isGstVerified,
-      profilePic,
     } = req.body;
+
+    // Handle file uploads and fallback to body values
+    let profilePic = profilePicFromBody || null;
+    let logoUrl = logoUrlFromBody || null;
+
+    if (req.files) {
+      if (req.files.profilePic && req.files.profilePic[0]) {
+        profilePic = req.files.profilePic[0].path;
+      }
+      if (req.files.logoUrl && req.files.logoUrl[0]) {
+        logoUrl = req.files.logoUrl[0].path;
+      }
+    }
+
+    console.log('Final profilePic:', profilePic);
+    console.log('Final logoUrl:', logoUrl);
 
     const profile = await CompanyRecruiterProfile.create({
       userId,
@@ -128,14 +179,35 @@ const updateProfile = async (req, res) => {
       industry,
       location,
       about,
-      logoUrl,
+      logoUrl: logoUrlFromBody,
+      profilePic: profilePicFromBody,
       hiringPreferences,
       languagesKnown,
       isEmailVerified,
       isPhoneVerified,
       isGstVerified,
-      profilePic,
     } = req.body;
+
+    // Handle file uploads and fallback to body values
+    let profilePic = profile.profilePic; // Keep existing if no new file
+    let logoUrl = profile.logoUrl; // Keep existing if no new file
+
+    // If new values provided in body, use them (unless files are uploaded)
+    if (profilePicFromBody && !req.files?.profilePic) {
+      profilePic = profilePicFromBody;
+    }
+    if (logoUrlFromBody && !req.files?.logoUrl) {
+      logoUrl = logoUrlFromBody;
+    }
+
+    if (req.files) {
+      if (req.files.profilePic && req.files.profilePic[0]) {
+        profilePic = req.files.profilePic[0].path;
+      }
+      if (req.files.logoUrl && req.files.logoUrl[0]) {
+        logoUrl = req.files.logoUrl[0].path;
+      }
+    }
 
     // Update profile fields except recruiterName, recruiterEmail, recruiterPhone
     await profile.update({
@@ -170,7 +242,7 @@ const updateProfile = async (req, res) => {
 };
 
 //  New method to get detailed list of job posts by recruiter
- const getJobPostsByRecruiter = async (req, res) => {
+const getJobPostsByRecruiter = async (req, res) => {
   try {
     const userId = req.user?.id;
 
@@ -328,4 +400,6 @@ module.exports = {
   getJobPostsByRecruiter,
   incrementViewCount,
   updateExperienceStatus,
+  upload,
+  handleUploadError,
 };

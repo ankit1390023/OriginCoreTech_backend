@@ -15,7 +15,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     certificate_image: {
-      type: DataTypes.BLOB('long'),
+      type: DataTypes.STRING(500), // Changed from BLOB to STRING for file paths
+      allowNull: true,
     },
     skill: {
       type: DataTypes.STRING,
@@ -34,12 +35,12 @@ module.exports = (sequelize, DataTypes) => {
 
   UserSkill.associate = function (models) {
     UserSkill.belongsTo(models.User, {
-      foreignKey: 'userId',  
-      targetKey: 'id', 
+      foreignKey: 'userId',
+      targetKey: 'id',
       onDelete: 'CASCADE',
     });
   };
-  
+
 
   return UserSkill;
 };
