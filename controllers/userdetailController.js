@@ -5,7 +5,6 @@ const { Op } = require('sequelize');
 async function createUserDetails(req, res) {
   try {
     const {
-      email,
       firstName,
       lastName,
       phone,
@@ -36,15 +35,22 @@ async function createUserDetails(req, res) {
 
     // console.log('Received user detail data:', req.body);
 
-    if (!email || !firstName || !lastName || !phone || !dob || !userType || !gender) {
+    if (!firstName || !lastName || !phone || !dob || !userType || !gender) {
       return res.status(400).json({ message: "Required fields are missing." });
     }
 
-    const registeredUser = await User.findOne({ where: { email } });
-    if (!registeredUser) {
-      return res.status(400).json({ message: "Email is not registered." });
+    // Get user ID from authenticated user (from authMiddleware)
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized. User ID not found." });
     }
-    const userId = registeredUser.id;
+
+    // Get user email from the authenticated user
+    const registeredUser = await User.findByPk(userId);
+    if (!registeredUser) {
+      return res.status(400).json({ message: "User not found." });
+    }
+    const email = registeredUser.email;
 
     const existingDetail = await UserDetail.findOne({ where: { userId } });
     if (existingDetail) {
@@ -173,6 +179,20 @@ async function updateUserDetailsByUserId(req, res) {
     delete updateData.experiences;
 
     const allowedFields = [
+      'firstName',
+      'lastName',
+      'phone',
+      'dob',
+      'city',
+      'gender',
+      'languages',
+      'userType',
+      'educationStandard',
+      'course',
+      'collegeName',
+      'specialization',
+      'startYear',
+      'endYear',
       'aboutus',
       'careerObjective',
       'resume',
@@ -180,13 +200,22 @@ async function updateUserDetailsByUserId(req, res) {
       'isEmailVerified',
       'isPhoneVerified',
       'isGstVerified',
-      'userprofilepic'
+      'userprofilepic',
+      'aadhaarNumber',
+      'aadhaarCardFile',
+      'isAadhaarVerified',
+      'currentLocation',
+      'jobLocation',
+      'salaryDetails',
+      'currentlyLookingFor',
+      'workMode',
+      'Standard'
     ];
 
-    const filteredUpdateData = { ...updateData };
+    const filteredUpdateData = {};
     allowedFields.forEach(field => {
-      if (!(field in updateData)) {
-        delete filteredUpdateData[field];
+      if (field in updateData) {
+        filteredUpdateData[field] = updateData[field];
       }
     });
 
@@ -196,7 +225,7 @@ async function updateUserDetailsByUserId(req, res) {
     }
 
     // Update userdetail fields
-    await userDetail.update(updateData);
+    await userDetail.update(filteredUpdateData);
 
     // Update experiences if provided
     if (Array.isArray(experiences) && experiences.length > 0) {
