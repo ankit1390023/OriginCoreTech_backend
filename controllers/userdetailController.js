@@ -5,8 +5,6 @@ const { Op } = require('sequelize');
 async function createUserDetails(req, res) {
   try {
     const {
-      userId,
-      email,
       firstName,
       lastName,
       phone,
@@ -37,20 +35,27 @@ async function createUserDetails(req, res) {
 
     // console.log('Received user detail data:', req.body);
 
-    if (!email || !firstName || !lastName || !phone || !dob || !userType || !gender) {
+    if (!firstName || !lastName || !phone || !dob || !userType || !gender) {
       return res.status(400).json({ message: "Required fields are missing." });
     }
 
-    const registeredUser = await User.findOne({ where: { email } });
-    if (!registeredUser) {
-      return res.status(400).json({ message: "Email is not registered." });
+    // Get user ID from authenticated user (from authMiddleware)
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized. User ID not found." });
     }
-    /// const userId = registeredUser.id;
 
-    // const existingDetail = await UserDetail.findOne({ where: { userId } });
-    // if (existingDetail) {
-    //   return res.status(409).json({ message: "User details already exist." });
-    // }
+    // Get user email from the authenticated user
+    const registeredUser = await User.findByPk(userId);
+    if (!registeredUser) {
+      return res.status(400).json({ message: "User not found." });
+    }
+    const userId = registeredUser.id;
+
+    const existingDetail = await UserDetail.findOne({ where: { userId } });
+    if (existingDetail) {
+      return res.status(409).json({ message: "User details already exist." });
+    }
 
     const emailExists = await UserDetail.findOne({
       where: {
@@ -83,9 +88,9 @@ async function createUserDetails(req, res) {
         endYear: null,
       };
     }
-    const userDetail = await UserDetail.findOne({ where: { userId } });
-    if (userDetail) {
-      await userDetail.update({
+
+    const userDetail = existingDetail
+      ? await existingDetail.update({
         firstName,
         lastName,
         email,
@@ -107,9 +112,8 @@ async function createUserDetails(req, res) {
         aadhaarNumber,
         aadhaarCardFile,
         isAadhaarVerified,
-      });
-    } else {
-      await UserDetail.create({
+      })
+      : await UserDetail.create({
         userId,
         firstName,
         lastName,
@@ -133,9 +137,6 @@ async function createUserDetails(req, res) {
         aadhaarCardFile,
         isAadhaarVerified,
       });
-    }
-
-
     // If experiences array is provided, create associated Experience records
     if (Array.isArray(experiences) && experiences.length > 0) {
       for (const exp of experiences) {
@@ -201,6 +202,20 @@ async function updateUserDetailsByUserId(req, res) {
     delete updateData.experiences;
 
     const allowedFields = [
+      'firstName',
+      'lastName',
+      'phone',
+      'dob',
+      'city',
+      'gender',
+      'languages',
+      'userType',
+      'educationStandard',
+      'course',
+      'collegeName',
+      'specialization',
+      'startYear',
+      'endYear',
       'aboutus',
       'careerObjective',
       'resume',
@@ -208,13 +223,22 @@ async function updateUserDetailsByUserId(req, res) {
       'isEmailVerified',
       'isPhoneVerified',
       'isGstVerified',
-      'userprofilepic'
+      'userprofilepic',
+      'aadhaarNumber',
+      'aadhaarCardFile',
+      'isAadhaarVerified',
+      'currentLocation',
+      'jobLocation',
+      'salaryDetails',
+      'currentlyLookingFor',
+      'workMode',
+      'Standard'
     ];
 
-    const filteredUpdateData = { ...updateData };
+    const filteredUpdateData = {};
     allowedFields.forEach(field => {
-      if (!(field in updateData)) {
-        delete filteredUpdateData[field];
+      if (field in updateData) {
+        filteredUpdateData[field] = updateData[field];
       }
     });
 
@@ -224,7 +248,7 @@ async function updateUserDetailsByUserId(req, res) {
     }
 
     // Update userdetail fields
-    await userDetail.update(updateData);
+    await userDetail.update(filteredUpdateData);
 
     // Update experiences if provided
     if (Array.isArray(experiences) && experiences.length > 0) {
