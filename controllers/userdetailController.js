@@ -5,6 +5,7 @@ const { Op } = require('sequelize');
 async function createUserDetails(req, res) {
   try {
     const {
+      userId,
       firstName,
       lastName,
       phone,
@@ -39,23 +40,23 @@ async function createUserDetails(req, res) {
       return res.status(400).json({ message: "Required fields are missing." });
     }
 
-    // Get user ID from authenticated user (from authMiddleware)
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized. User ID not found." });
-    }
+    // // Get user ID from authenticated user (from authMiddleware)
+    // const userId = req.user?.id;
+    // if (!userId) {
+    //   return res.status(401).json({ message: "Unauthorized. User ID not found." });
+    // }
 
     // Get user email from the authenticated user
     const registeredUser = await User.findByPk(userId);
     if (!registeredUser) {
       return res.status(400).json({ message: "User not found." });
     }
-    const userId = registeredUser.id;
+
 
     const existingDetail = await UserDetail.findOne({ where: { userId } });
-    if (existingDetail) {
-      return res.status(409).json({ message: "User details already exist." });
-    }
+    // if (existingDetail) {
+    //   return res.status(409).json({ message: "User details already exist." });
+    // }
 
     const emailExists = await UserDetail.findOne({
       where: {
