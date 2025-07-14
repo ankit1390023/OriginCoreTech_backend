@@ -23,16 +23,16 @@ const { Domain, Skill } = require('./models'); // Sequelize models
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ CORS Setup
+//  CORS Setup
 app.use(cors({
   origin: process.env.CORS_ORIGIN,
   credentials: true,
 }));
 
-// ✅ Middleware
+//  Middleware
 app.use(bodyParser.json());
 
-// ✅ API Routes
+//  API Routes
 app.use('/api/users', userRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/mobileotp', otpmobileRoutes);
@@ -45,16 +45,16 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api', universityRoutes);
 
-// ✅ File upload
+//  File upload
 const upload = multer({ dest: 'uploads/' });
 app.post('/upload-skill', upload.any(), uploadSkillController);
 
-// ✅ Health Check
+//  Health Check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'Server is running' });
 });
 
-// ✅ Static Filters APIs
+//  Static Filters APIs
 const allowedJobRoles = ['Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Data Scientist', 'DevOps Engineer', 'UI/UX Designer'];
 const allowedLocations = ['Bengaluru', 'Hyderabad', 'Pune', 'Chennai', 'Gurugram', 'Noida', 'Delhi NCR'];
 const allowedUserTypes = ['Student', 'Company', 'University'];
@@ -69,7 +69,7 @@ app.get('/api/courses', (req, res) => res.json(allowedCourses));
 app.get('/api/specializations', (req, res) => res.json(allowedSpecializations));
 app.get('/api/colleges', (req, res) => res.json(allowedColleges));
 
-// ✅ Internship Filter with Skills + Domains
+//  Internship Filter with Skills + Domains
 const durationOptions = ['Permanent', '6 Months', '3 Months', '4 Months', '2 Months'];
 const allowedStartMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const allowedPerks = ['Certificate', 'Letter of recommendation', 'Flexible work hours', '5 days a week', 'Informal dress code', 'Free snacks & beverages', 'Pre-placement offer (PPO)'];
@@ -94,7 +94,7 @@ app.get('/api/internship-filters', async (req, res) => {
   }
 });
 
-// ✅ Sequelize Connect + Start Server
+//  Sequelize Connect + Start Server
 (async () => {
   try {
     await sequelize.authenticate();
