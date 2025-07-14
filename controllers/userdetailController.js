@@ -50,12 +50,12 @@ async function createUserDetails(req, res) {
     if (!registeredUser) {
       return res.status(400).json({ message: "User not found." });
     }
-    const email = registeredUser.email;
+    const userId = registeredUser.id;
 
     const existingDetail = await UserDetail.findOne({ where: { userId } });
-    // if (existingDetail) {
-    //   return res.status(409).json({ message: "User details already exist." });
-    // }
+    if (existingDetail) {
+      return res.status(409).json({ message: "User details already exist." });
+    }
 
     const emailExists = await UserDetail.findOne({
       where: {

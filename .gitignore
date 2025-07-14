@@ -28,6 +28,7 @@ config.js
 .env
 .env.*
 
+
 # SQLite or other local DBs (optional)
 *.sqlite
 *.sqlite3
@@ -57,3 +58,5 @@ jest-coverage/
 # Other custom folders
 uploads/
 debug/
+
+package-lock.json
