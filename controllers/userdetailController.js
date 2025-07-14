@@ -5,7 +5,6 @@ const { Op } = require('sequelize');
 async function createUserDetails(req, res) {
   try {
     const {
-      userId,
       firstName,
       lastName,
       phone,
@@ -41,10 +40,10 @@ async function createUserDetails(req, res) {
     }
 
     // // Get user ID from authenticated user (from authMiddleware)
-    // const userId = req.user?.id;
-    // if (!userId) {
-    //   return res.status(401).json({ message: "Unauthorized. User ID not found." });
-    // }
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized. User ID not found." });
+    }
 
     // Get user email from the authenticated user
     const registeredUser = await User.findByPk(userId);
