@@ -53,9 +53,9 @@ async function createUserDetails(req, res) {
     const email = registeredUser.email;
 
     const existingDetail = await UserDetail.findOne({ where: { userId } });
-    if (existingDetail) {
-      return res.status(409).json({ message: "User details already exist." });
-    }
+    // if (existingDetail) {
+    //   return res.status(409).json({ message: "User details already exist." });
+    // }
 
     const emailExists = await UserDetail.findOne({
       where: {
@@ -89,31 +89,54 @@ async function createUserDetails(req, res) {
       };
     }
 
-    const userDetail = await UserDetail.create({
-      userId,
-      firstName,
-      lastName,
-      email,
-      phone,
-      dob,
-      city,
-      gender,
-      languages,
-      userType,
-      ...eduFields,
-      aboutus,
-      careerObjective,
-      resume,
-      language,
-      isEmailVerified,
-      isPhoneVerified,
-      isGstVerified,
-      userprofilepic,
-      aadhaarNumber,
-      aadhaarCardFile,
-      isAadhaarVerified,
-    });
-
+    const userDetail = existingDetail
+      ? await existingDetail.update({
+        firstName,
+        lastName,
+        email,
+        phone,
+        dob,
+        city,
+        gender,
+        languages,
+        userType,
+        ...eduFields,
+        aboutus,
+        careerObjective,
+        resume,
+        language,
+        isEmailVerified,
+        isPhoneVerified,
+        isGstVerified,
+        userprofilepic,
+        aadhaarNumber,
+        aadhaarCardFile,
+        isAadhaarVerified,
+      })
+      : await UserDetail.create({
+        userId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        dob,
+        city,
+        gender,
+        languages,
+        userType,
+        ...eduFields,
+        aboutus,
+        careerObjective,
+        resume,
+        language,
+        isEmailVerified,
+        isPhoneVerified,
+        isGstVerified,
+        userprofilepic,
+        aadhaarNumber,
+        aadhaarCardFile,
+        isAadhaarVerified,
+      });
     // If experiences array is provided, create associated Experience records
     if (Array.isArray(experiences) && experiences.length > 0) {
       for (const exp of experiences) {
