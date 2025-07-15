@@ -32,7 +32,10 @@ async function createUserDetails(req, res) {
       aadhaarCardFile,
       isAadhaarVerified,
       jobLocation,
-      experiences // new field for multiple experiences
+      experiences, // new field for multiple experiences
+      salaryDetails,
+      currentlyLookingFor,
+      workMode,
     } = req.body;
 
     // console.log('Received user detail data:', req.body);
@@ -115,6 +118,10 @@ async function createUserDetails(req, res) {
         aadhaarCardFile,
         isAadhaarVerified,
         jobLocation,
+        salaryDetails,
+        currentlyLookingFor,
+        workMode,
+
       })
       : await UserDetail.create({
         userId,
@@ -140,6 +147,9 @@ async function createUserDetails(req, res) {
         aadhaarCardFile,
         isAadhaarVerified,
         jobLocation,
+        salaryDetails,
+        currentlyLookingFor,
+        workMode,
       });
     // If experiences array is provided, create associated Experience records
     if (Array.isArray(experiences) && experiences.length > 0) {
