@@ -31,6 +31,7 @@ async function createUserDetails(req, res) {
       aadhaarNumber,
       aadhaarCardFile,
       isAadhaarVerified,
+      jobLocation,
       experiences // new field for multiple experiences
     } = req.body;
 
@@ -113,6 +114,7 @@ async function createUserDetails(req, res) {
         aadhaarNumber,
         aadhaarCardFile,
         isAadhaarVerified,
+        jobLocation,
       })
       : await UserDetail.create({
         userId,
@@ -137,6 +139,7 @@ async function createUserDetails(req, res) {
         aadhaarNumber,
         aadhaarCardFile,
         isAadhaarVerified,
+        jobLocation,
       });
     // If experiences array is provided, create associated Experience records
     if (Array.isArray(experiences) && experiences.length > 0) {
@@ -151,12 +154,19 @@ async function createUserDetails(req, res) {
             companyRecruiterProfileId = companyProfile.id;
           }
         }
+        const totalExperience = exp.endDate ? (new Date(exp.endDate) - new Date(exp.startDate)) / (1000 * 60 * 60 * 24 * 365) : 0; // Calculate experience in years
+        // Delete existing experiences for the user
+        await Experience.destroy({
+          where: { userDetailId: userDetail.id }
+        });
+
+        // Create new experience records
         await Experience.create({
           userDetailId: userDetail.id,
           companyRecruiterProfileId,
-          totalExperience: exp.totalExperience || null,
-          currentJobRole: exp.currentJobRole || null,
-          currentCompany: exp.currentCompany || null,
+          totalExperience,
+          currentJobRole: exp.jobRole || null,
+          currentCompany: exp.company || null,
           status: exp.status || 'pending',
         });
       }
