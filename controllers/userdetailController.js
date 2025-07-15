@@ -5,6 +5,7 @@ const { Op } = require('sequelize');
 async function createUserDetails(req, res) {
   try {
     const {
+      email,
       firstName,
       lastName,
       phone,
@@ -35,7 +36,7 @@ async function createUserDetails(req, res) {
 
     // console.log('Received user detail data:', req.body);
 
-    if (!firstName || !lastName || !phone || !dob || !userType || !gender) {
+    if (!email || !firstName || !lastName || !phone || !dob || !userType || !gender) {
       return res.status(400).json({ message: "Required fields are missing." });
     }
 
