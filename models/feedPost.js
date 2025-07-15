@@ -40,12 +40,13 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: '[]',
     },
-    
+
   }, {
+    tableName: 'feedposts',
     timestamps: true,
   });
 
-  FeedPost.associate = function(models) {
+  FeedPost.associate = function (models) {
     FeedPost.belongsTo(models.User, { foreignKey: 'userId', onDelete: 'CASCADE' });
   };
 
