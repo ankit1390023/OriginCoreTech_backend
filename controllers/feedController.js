@@ -1,5 +1,6 @@
 const { User, UserDetail, CompanyRecruiterProfile, FeedPost } = require('../models');
 const { Follow } = require('../models');
+const { Op, fn, col, literal, Sequelize, where } = require('sequelize');
 
 // create feed
 const createFeedPost = async (req, res) => {
