@@ -74,12 +74,6 @@ const getFeedPosts = async (req, res) => {
               model: CompanyRecruiterProfile,
               as: 'CompanyRecruiterProfile',
               attributes: ['logoUrl']
-            },
-            {
-              model: Follow,
-              as: 'Followers',
-              attributes: [[Sequelize.fn('COUNT', Sequelize.col('Followers.followerId')), 'followersCount']],
-              required: false,
             }
           ]
         }
