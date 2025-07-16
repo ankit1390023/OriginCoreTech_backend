@@ -78,7 +78,7 @@ const getFeedPosts = async (req, res) => {
             {
               model: Follow,
               as: 'Followers',
-              attributes: [[sequelize.fn('COUNT', sequelize.col('Followers.followerId')), 'followersCount']],
+              attributes: [[Sequelize.fn('COUNT', Sequelize.col('Followers.followerId')), 'followersCount']],
               required: false,
             }
           ]
