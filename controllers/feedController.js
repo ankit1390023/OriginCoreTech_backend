@@ -72,11 +72,19 @@ const getFeedPosts = async (req, res) => {
             {
               model: CompanyRecruiterProfile,
               as: 'CompanyRecruiterProfile',
-              attributes: ['logoUrl',]
+              attributes: ['logoUrl']
+            },
+            {
+              model: Follow,
+              as: 'Followers',
+              attributes: [[sequelize.fn('COUNT', sequelize.col('Followers.followerId')), 'followersCount']],
+              where: { followedId: sequelize.col('User.id') },
+              required: false,
             }
           ]
         }
-      ]
+      ],
+      group: ['User.id']
     });
 
     // Parse comments and restructure user profilePic
@@ -250,7 +258,7 @@ module.exports = {
   getFeedPosts,
   likeUnlikePost,
   commentOnPost,
- toggleFollowUser,
- getUserFollows
- 
+  toggleFollowUser,
+  getUserFollows
+
 };
