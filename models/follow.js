@@ -3,13 +3,13 @@ module.exports = (sequelize, DataTypes) => {
     followerId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: { model: 'Users', key: 'id' },
+      references: { model: 'User', key: 'id' },
       onDelete: 'CASCADE'
     },
     followedId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: { model: 'Users', key: 'id' },
+      references: { model: 'User', key: 'id' },
       onDelete: 'CASCADE'
     }
   }, {
