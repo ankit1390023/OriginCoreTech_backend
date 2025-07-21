@@ -158,7 +158,32 @@ async function getUserDetailsByUserId(req, res) {
     if (!userDetail) {
       return res.status(404).json({ message: "User details not found." });
     }
-    return res.status(200).json({ userDetail });
+
+    // Fetch user skills
+    const userSkills = await UserSkill.findAll({
+      where: { userId },
+      attributes: ['skill']
+    });
+
+    // Extract education fields
+    const educationFields = [
+      'educationStandard',
+      'course',
+      'collegeName',
+      'specialization',
+      'startYear',
+      'endYear'
+    ];
+    const education = {};
+    educationFields.forEach(field => {
+      education[field] = userDetail[field];
+    });
+
+    return res.status(200).json({
+      userDetail,
+      skills: userSkills,
+      education
+    });
   } catch (error) {
     console.error("Error fetching user details:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
