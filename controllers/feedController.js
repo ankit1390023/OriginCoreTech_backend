@@ -1,5 +1,6 @@
 const { User, UserDetail, CompanyRecruiterProfile, FeedPost } = require('../models');
 const { Follow } = require('../models');
+const { Op, fn, col, literal, Sequelize, where } = require('sequelize');
 
 // create feed
 const createFeedPost = async (req, res) => {
@@ -72,33 +73,38 @@ const getFeedPosts = async (req, res) => {
             {
               model: CompanyRecruiterProfile,
               as: 'CompanyRecruiterProfile',
-              attributes: ['logoUrl',]
+              attributes: ['logoUrl']
             }
           ]
         }
       ]
     });
-
-    // Parse comments and restructure user profilePic
-    const posts = rawPosts.map(post => {
+    const posts = await Promise.all(rawPosts.map(async post => {
       const postData = post.toJSON();
 
-      // Parse comments
-      postData.comments = postData.comments ? JSON.parse(postData.comments) : [];
-
-      // Dynamically attach user profilePic
+      // Attach user profilePic
       if (postData.User.userRole === 'COMPANY') {
         postData.User.profilePic = postData.User.CompanyRecruiterProfile?.logoUrl || null;
       } else {
         postData.User.profilePic = postData.User.UserDetail?.userprofilepic || null;
       }
 
-      // Optionally remove nested objects after extracting profilePic
+      // Remove nested models
       delete postData.User.UserDetail;
       delete postData.User.CompanyRecruiterProfile;
 
+      // Parse comments
+      postData.comments = postData.comments ? JSON.parse(postData.comments) : [];
+
+      // Get followers count
+      const followersCount = await Follow.count({
+        where: { followedId: postData.User.id }
+      });
+
+      postData.User.followersCount = followersCount;
+
       return postData;
-    });
+    }));
 
     return res.status(200).json({
       totalPosts: count,
@@ -111,6 +117,7 @@ const getFeedPosts = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 // update if unlike after like
 const likeUnlikePost = async (req, res) => {
   try {
@@ -250,7 +257,7 @@ module.exports = {
   getFeedPosts,
   likeUnlikePost,
   commentOnPost,
- toggleFollowUser,
- getUserFollows
- 
+  toggleFollowUser,
+  getUserFollows
+
 };
