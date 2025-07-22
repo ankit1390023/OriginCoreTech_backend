@@ -5,7 +5,7 @@ const UserDetail = sequelize.define("UserDetail", {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'User',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'CASCADE',
