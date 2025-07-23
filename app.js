@@ -19,6 +19,7 @@ const feedRoutes = require('./routes/feedRoutes');
 const skillRoutes = require('./routes/skillRoutes');
 const universityRoutes = require('./routes/universitydetailRoutes');
 const filterRoutes = require('./routes/filterRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // Controller Imports
 const { serveCertificate } = require('./controllers/fileController');
@@ -54,6 +55,10 @@ app.use('/api', filterRoutes);
 
 //  File upload
 const upload = multer({ dest: 'uploads/' });
+
+// UploadRoutes
+app.use('/api', uploadRoutes);
+
 app.post('/api/upload-skill', upload.any(), uploadSkillController);
 
 // Get user skills with certificate URLs

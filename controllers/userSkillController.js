@@ -1,67 +1,35 @@
 
-const fs = require('fs');
-const path = require('path');
 const { UserSkill } = require('../models');
 
+// Refactored: Now expects application/json with certificate_image as a URL
 const uploadSkillController = async (req, res) => {
   try {
-    const { user_id } = req.body;
-    const skills = JSON.parse(req.body.skills);
+    const { user_id, skills } = req.body;
+    // skills should be an array of skill objects, each with a certificate_image URL
 
-    // File size validation (5MB limit)
-    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+    if (!Array.isArray(skills)) {
+      return res.status(400).json({ error: 'Skills must be an array.' });
+    }
 
     for (let i = 0; i < skills.length; i++) {
       const skillItem = skills[i];
-      const fileKey = `certificate_image_${i}`;
-
-
-      const imageFile = req.files.find(file => file.fieldname === fileKey);
-
-      if (!imageFile) {
-        console.warn(`No certificate image found for skill at index ${i}`);
-        continue;
+      // Validate required fields
+      if (!skillItem.skill_id || !skillItem.skill || !skillItem.authority || !skillItem.certificate_image) {
+        return res.status(400).json({ error: `Missing required fields in skill at index ${i}` });
       }
 
-
-      // Check file size
-      if (imageFile.size > MAX_FILE_SIZE) {
-        return res.status(400).json({
-          error: `File ${imageFile.originalname} is too large. Maximum size allowed is 5MB.`
-        });
-      }
-
-      // Create certificates directory if it doesn't exist
-      const uploadsDir = path.join(__dirname, '../uploads/certificates');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      } 
-
-      // Generate unique filename while preserving original name
-      const fileExtension = path.extname(imageFile.originalname);
-      const originalNameWithoutExt = path.basename(imageFile.originalname, fileExtension);
-      const timestamp = Date.now();
-      const uniqueFilename = `${originalNameWithoutExt}_${timestamp}${fileExtension}`;
-      const filePath = path.join(uploadsDir, uniqueFilename);
-
-      // Move file to permanent location
-      fs.renameSync(imageFile.path, filePath);
-
-
-      // Store file path instead of file data in database
       const userSkillData = {
         userId: parseInt(user_id),
         skill_id: parseInt(skillItem.skill_id),
         skill: skillItem.skill,
         authority: skillItem.authority,
-        certificate_image: `/uploads/certificates/${uniqueFilename}` // Store path instead of data
+        certificate_image: skillItem.certificate_image // Now a URL
       };
 
-      const createdSkill = await UserSkill.create(userSkillData);
-
+      await UserSkill.create(userSkillData);
     }
     res.status(200).json({ message: 'Skills uploaded successfully!' });
-  } catch (error) {  
+  } catch (error) {
     res.status(500).json({ error: 'Error uploading skills' });
   }
 };

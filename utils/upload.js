@@ -8,6 +8,10 @@ const storage = multer.diskStorage({
             cb(null, 'uploads/profilePics/');
         } else if (file.fieldname === 'logoUrl') {
             cb(null, 'uploads/logos/');
+        } else if (file.fieldname === 'feedImage') { // <-- Added for feed images
+            cb(null, 'uploads/feedImages/');
+        } else if (file.fieldname === 'certificateImage') { // <-- Added for certificate images
+            cb(null, 'uploads/certificates/');
         } else {
             cb(null, 'uploads/');
         }
@@ -21,6 +25,10 @@ const storage = multer.diskStorage({
             cb(null, 'profile_' + userId + '_' + timestamp + ext);
         } else if (file.fieldname === 'logoUrl') {
             cb(null, 'logo_' + userId + '_' + timestamp + ext);
+        } else if (file.fieldname === 'feedImage') { // <-- Added for feed images
+            cb(null, 'feed_' + userId + '_' + timestamp + ext);
+        } else if (file.fieldname === 'certificateImage') { // <-- Added for certificate images
+            cb(null, 'cert_' + userId + '_' + timestamp + ext);
         } else {
             cb(null, file.fieldname + '_' + userId + '_' + timestamp + ext);
         }
