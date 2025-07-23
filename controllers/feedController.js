@@ -1,7 +1,7 @@
 const { User, UserDetail, CompanyRecruiterProfile, FeedPost } = require('../models');
 const { Follow } = require('../models');
 const { Op, fn, col, literal, Sequelize, where } = require('sequelize');
-
+const { PostLikes } = require('../models');
 // create feed
 const createFeedPost = async (req, res) => {
   try {
@@ -56,6 +56,12 @@ const getFeedPosts = async (req, res) => {
     limit = parseInt(limit) || 10;
     const offset = (page - 1) * limit;
 
+    // Get userId from JWT (set by authMiddleware)
+    const loggedInUserId = req.user && req.user.id;
+    if (!loggedInUserId) {
+      return res.status(401).json({ message: "Unauthorized: user not found in token" });
+    }
+
     const { count, rows: rawPosts } = await FeedPost.findAndCountAll({
       order: [['createdAt', 'DESC']],
       limit,
@@ -63,7 +69,7 @@ const getFeedPosts = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'userRole'],
           include: [
             {
               model: UserDetail,
@@ -79,6 +85,7 @@ const getFeedPosts = async (req, res) => {
         }
       ]
     });
+
     const posts = await Promise.all(rawPosts.map(async post => {
       const postData = post.toJSON();
 
@@ -100,8 +107,13 @@ const getFeedPosts = async (req, res) => {
       const followersCount = await Follow.count({
         where: { followedId: postData.User.id }
       });
-
       postData.User.followersCount = followersCount;
+
+      // ✅ Check if logged-in user has liked this post
+      const liked = await PostLikes.findOne({
+        where: { postId: postData.id, userId: loggedInUserId }
+      });
+      postData.isLiked = !!liked;
 
       return postData;
     }));
@@ -118,7 +130,7 @@ const getFeedPosts = async (req, res) => {
   }
 };
 
-// update if unlike after like
+
 const likeUnlikePost = async (req, res) => {
   try {
     const postId = req.params.id;
@@ -133,10 +145,18 @@ const likeUnlikePost = async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
+    const existingLike = await PostLikes.findOne({ where: { postId, userId } });
+
     if (action === 'like') {
-      post.likeCount = (post.likeCount || 0) + 1;
+      if (!existingLike) {
+        await PostLikes.create({ postId, userId });
+        post.likeCount = (post.likeCount || 0) + 1;
+      }
     } else if (action === 'unlike') {
-      post.likeCount = Math.max((post.likeCount || 0) - 1, 0);
+      if (existingLike) {
+        await existingLike.destroy();
+        post.likeCount = Math.max((post.likeCount || 0) - 1, 0);
+      }
     } else {
       return res.status(400).json({ message: 'Invalid action. Use "like" or "unlike".' });
     }
@@ -144,11 +164,13 @@ const likeUnlikePost = async (req, res) => {
     await post.save();
 
     return res.status(200).json({ message: 'Post like status updated', likeCount: post.likeCount });
+
   } catch (error) {
     console.error('Error liking/unliking post:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 // comment post count
 const commentOnPost = async (req, res) => {
