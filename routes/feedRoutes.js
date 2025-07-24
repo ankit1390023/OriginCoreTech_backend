@@ -8,12 +8,13 @@ const {
   getUserFollows,
   toggleFollowUser
 } = require('../controllers/feedController');
+const authMiddleware = require('../middleware/authMiddleware');
 
 router.post('/feed', createFeedPost);
-router.get('/posts', getFeedPosts);
+router.get('/posts',authMiddleware, getFeedPosts);
 router.post('/posts/:id/like', likeUnlikePost);
 router.post('/posts/:id/comment', commentOnPost);
 router.post('/follow', toggleFollowUser);
-router.get('/:userId/follower', getUserFollows);
+router.get('/:userId/:type', getUserFollows);
 
 module.exports = router;

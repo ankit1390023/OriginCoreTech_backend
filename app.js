@@ -19,6 +19,7 @@ const feedRoutes = require('./routes/feedRoutes');
 const skillRoutes = require('./routes/skillRoutes');
 const universityRoutes = require('./routes/universitydetailRoutes');
 const filterRoutes = require('./routes/filterRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 // Controller Imports
 const { serveCertificate } = require('./controllers/fileController');
@@ -33,6 +34,10 @@ app.use(cors({
 
 //  Middleware
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+
+
 
 //  API Routes
 app.use('/api/users', userRoutes);
@@ -50,15 +55,19 @@ app.use('/api', filterRoutes);
 
 //  File upload
 const upload = multer({ dest: 'uploads/' });
+
+// UploadRoutes
+app.use('/api', uploadRoutes);
+
 app.post('/api/upload-skill', upload.any(), uploadSkillController);
 
 // Get user skills with certificate URLs
 app.get('/api/user-skills/:userId', getUserSkillsController);
 
 //  Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 //  Specific route for certificate files with better error handling
-app.get('/certificates/:filename', serveCertificate);
+app.get('api/certificates/:filename', serveCertificate);
 
 module.exports = app;

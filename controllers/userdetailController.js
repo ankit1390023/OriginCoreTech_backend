@@ -208,7 +208,19 @@ async function getUserDetailsByUserId(req, res) {
     if (!userDetail) {
       return res.status(404).json({ message: "User details not found." });
     }
-    return res.status(200).json({ userDetail });
+
+    // Fetch user skills
+    const userSkills = await UserSkill.findAll({
+      where: { userId },
+      attributes: ['skill']
+    });
+    // Return skills as array of strings
+    const skillsArray = userSkills.map(s => s.skill);
+    return res.status(200).json({
+      userDetail,
+      skills: skillsArray,
+
+    });
   } catch (error) {
     console.error("Error fetching user details:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
@@ -221,6 +233,8 @@ async function updateUserDetailsByUserId(req, res) {
     const updateData = req.body;
     const experiences = updateData.experiences || [];
     delete updateData.experiences;
+    const skills = updateData.skills || [];
+    delete updateData.skills;
 
     const allowedFields = [
       'firstName',
@@ -274,62 +288,93 @@ async function updateUserDetailsByUserId(req, res) {
     // Update experiences if provided
     if (Array.isArray(experiences) && experiences.length > 0) {
       const Experience = require('../models').Experience;
-      // console.log('Existing experiences for userDetailId:', userDetail.id);
-      const allExperiences = await Experience.findAll({ where: { userDetailId: userDetail.id } });
-      console.log('All experiences:', allExperiences.map(e => e.toJSON()));
       for (const exp of experiences) {
-        // console.log('Updating experience:', exp);
+        let existingExp = null;
         if (exp.id) {
-          // Update existing experience
-          const existingExp = await Experience.findByPk(exp.id);
-          if (existingExp) {
-            // If status is approved, change to pending on update
-            if (existingExp.status === 'approved') {
-              exp.status = 'pending';
-            }
-            await existingExp.update(exp);
-            console.log('Updated experience:', existingExp);
-          } else {
-            console.log('Experience not found with id:', exp.id);
-          }
-        } else {
-          // Try to find experience by userDetailId, currentCompany, currentJobRole
-          const { Op } = require('sequelize');
-          const { sequelize } = require('../models');
-          const existingExp = await Experience.findOne({
+          existingExp = await Experience.findByPk(exp.id);
+        }
+        if (!existingExp && exp.currentCompany && exp.currentJobRole) {
+          existingExp = await Experience.findOne({
             where: {
               userDetailId: userDetail.id,
-              [Op.and]: [
-                // Case-insensitive and trimmed comparison for currentCompany
-                sequelize.where(
-                  sequelize.fn('LOWER', sequelize.fn('TRIM', sequelize.col('currentCompany'))),
-                  exp.currentCompany ? exp.currentCompany.trim().toLowerCase() : null
-                ),
-                // Case-insensitive and trimmed comparison for currentJobRole
-                sequelize.where(
-                  sequelize.fn('LOWER', sequelize.fn('TRIM', sequelize.col('currentJobRole'))),
-                  exp.currentJobRole ? exp.currentJobRole.trim().toLowerCase() : null
-                )
-              ]
+              currentCompany: exp.currentCompany,
+              currentJobRole: exp.currentJobRole
             }
           });
-          if (existingExp) {
-            if (existingExp.status === 'approved') {
-              exp.status = 'pending';
-            }
-            await existingExp.update(exp);
-            // console.log('Updated experience by fields:', existingExp);
-          } else {
-            console.log('Experience not found by fields, skipping update:', exp);
-          }
         }
-        // Do not create new experience records on update
+        if (existingExp) {
+          // If status is approved, change to pending on update
+          if (existingExp.status === 'approved') {
+            exp.status = 'pending';
+          }
+          await existingExp.update({
+            currentCompany: exp.currentCompany,
+            currentJobRole: exp.currentJobRole,
+            totalExperience: exp.totalExperience,
+            status: exp.status
+          });
+        } else {
+          // Create new experience if not found, use status from payload or default to 'pending'
+          await Experience.create({
+            userDetailId: userDetail.id,
+            currentCompany: exp.currentCompany,
+            currentJobRole: exp.currentJobRole,
+            totalExperience: exp.totalExperience,
+            status: exp.status || 'pending'
+          });
+        }
       }
     }
 
-    return res.status(200).json({ message: "User details updated successfully.", userDetail });
+    // Update skills if provided
+    if (Array.isArray(skills)) {
+      // Remove all existing skills for the user
+      await UserSkill.destroy({ where: { userId } });
+      // Add new skills if any
+      if (skills.length > 0) {
+        const skillRecords = skills.map(skill => ({
+          userId,
+          skill,
+          authority: '', // or set as needed
+          skill_id: 0    // or set as needed
+        }));
+        await UserSkill.bulkCreate(skillRecords);
+      }
+    }
+
+    // Fetch updated skills
+    const userSkills = await UserSkill.findAll({
+      where: { userId },
+      attributes: ['skill']
+    });
+
+    // Fetch updated experiences
+    const updatedExperiences = await Experience.findAll({
+      where: { userDetailId: userDetail.id },
+      attributes: [
+        'id',
+        'currentCompany',
+        'currentJobRole',
+        'totalExperience',
+        'status'
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Return skills as array of strings
+    const skillsArray = userSkills.map(s => s.skill);
+
+    return res.status(200).json({
+      message: "User details updated successfully.", userDetail,
+      skills: skillsArray,
+      experiences: updatedExperiences
+    });
+
+
   } catch (error) {
+
     console.error("Error updating user details:", error);
+
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 }
@@ -427,8 +472,7 @@ const getPublicProfileByUserId = async (req, res) => {
       attributes: [
         'firstName', 'lastName', 'language', 'userType', 'aboutus',
         'careerObjective', 'userprofilepic', 'email',
-        'course', 'specialization',
-        'Standard'
+        'course', 'specialization', 'Standard', 'college', 'startYear', 'endYear'
       ],
       raw: true
     });
@@ -451,6 +495,8 @@ const getPublicProfileByUserId = async (req, res) => {
       attributes: ['skill']
     });
 
+    const skillArray = userSkills.map(s => s.skill);
+
     // 3. User activity (feed posts)
     const feedPosts = await FeedPost.findAll({
       where: { userId },
@@ -471,7 +517,7 @@ const getPublicProfileByUserId = async (req, res) => {
 
     return res.status(200).json({
       publicProfile: userDetail,
-      skills: userSkills,
+      skills: skillArray,
       activity: feedPosts,
       experiences: experiences
     });
