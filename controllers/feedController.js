@@ -171,7 +171,6 @@ const likeUnlikePost = async (req, res) => {
   }
 };
 
-
 // comment post count
 const commentOnPost = async (req, res) => {
   try {

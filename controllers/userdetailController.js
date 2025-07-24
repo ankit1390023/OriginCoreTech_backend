@@ -472,8 +472,7 @@ const getPublicProfileByUserId = async (req, res) => {
       attributes: [
         'firstName', 'lastName', 'language', 'userType', 'aboutus',
         'careerObjective', 'userprofilepic', 'email',
-        'course', 'specialization',
-        'Standard'
+        'course', 'specialization', 'Standard', 'college', 'startYear', 'endYear'
       ],
       raw: true
     });
@@ -496,6 +495,8 @@ const getPublicProfileByUserId = async (req, res) => {
       attributes: ['skill']
     });
 
+    const skillArray = userSkills.map(s => s.skill);
+
     // 3. User activity (feed posts)
     const feedPosts = await FeedPost.findAll({
       where: { userId },
@@ -516,7 +517,7 @@ const getPublicProfileByUserId = async (req, res) => {
 
     return res.status(200).json({
       publicProfile: userDetail,
-      skills: userSkills,
+      skills: skillArray,
       activity: feedPosts,
       experiences: experiences
     });
