@@ -103,6 +103,9 @@ const getFeedPosts = async (req, res) => {
       // Parse comments
       postData.comments = postData.comments ? JSON.parse(postData.comments) : [];
 
+      // Collect commenter userIds for batch fetching
+      postData._commenterUserIds = postData.comments.map(c => parseInt(c.userId)).filter(Boolean);
+
       // Get followers count
       const followersCount = await Follow.count({
         where: { followedId: postData.User.id }
@@ -117,6 +120,47 @@ const getFeedPosts = async (req, res) => {
 
       return postData;
     }));
+
+    // Batch fetch all unique commenter userIds across all posts
+    const allCommenterUserIds = Array.from(new Set(posts.flatMap(p => p._commenterUserIds)));
+    let commenterUserMap = {};
+    if (allCommenterUserIds.length > 0) {
+      const commenters = await User.findAll({
+        where: { id: allCommenterUserIds },
+        attributes: ['id', 'firstName', 'lastName', 'userRole'],
+        include: [
+          { model: UserDetail, as: 'UserDetail', attributes: ['userprofilepic'] },
+          { model: CompanyRecruiterProfile, as: 'CompanyRecruiterProfile', attributes: ['logoUrl'] }
+        ]
+      });
+      commenterUserMap = Object.fromEntries(commenters.map(u => {
+        let profilePic = null;
+        if (u.userRole === 'COMPANY') {
+          profilePic = u.CompanyRecruiterProfile?.logoUrl || null;
+        } else {
+          profilePic = u.UserDetail?.userprofilepic || null;
+        }
+        return [u.id, {
+          firstName: u.firstName,
+          lastName: u.lastName,
+          profilePic
+        }];
+      }));
+    }
+
+    // Enrich comments with user info
+    posts.forEach(post => {
+      post.comments = post.comments.map(comment => {
+        const userInfo = commenterUserMap[parseInt(comment.userId)] || {};
+        return {
+          ...comment,
+          firstName: userInfo.firstName || null,
+          lastName: userInfo.lastName || null,
+          profilePic: userInfo.profilePic || null
+        };
+      });
+      delete post._commenterUserIds; // cleanup
+    });
 
     return res.status(200).json({
       totalPosts: count,
@@ -170,6 +214,7 @@ const likeUnlikePost = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 // comment post count
 const commentOnPost = async (req, res) => {
