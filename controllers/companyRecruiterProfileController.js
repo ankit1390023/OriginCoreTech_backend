@@ -1,43 +1,19 @@
 const multer = require('multer');
 const path = require('path');
-const { User, CompanyRecruiterProfile,JobPost, } = require('../models');
+const { User, CompanyRecruiterProfile, JobPost, } = require('../models');
 const Application = require('../models/application');
 const { Op, fn, col, literal, Sequelize } = require('sequelize');
 const { Experience } = require('../models');
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/profilePics/');
-  },
-  filename: function (req, file, cb) {
-    const ext = path.extname(file.originalname);
-    cb(null, 'profile_' + req.user.id + '_' + Date.now() + ext);
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png|gif/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only images are allowed'));
-    }
-  }
-}).single('profilePic');
+const { parseBoolean, parseJsonField, extractProfileFiles } = require('../utils/fieldParsers');
+const { upload, handleUploadError } = require('../utils/upload');
 
 const createProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-
+    console.log("userId", userId);
     if (!req.body) {
       return res.status(400).json({ message: 'Request body is missing' });
     }
-
     // Check if user role is COMPANY
     const user = await User.findOne({ where: { id: userId, userRole: 'COMPANY' } });
     if (!user) {
@@ -61,14 +37,77 @@ const createProfile = async (req, res) => {
       industry,
       location,
       about,
-      logoUrl,
+      logoUrl: logoUrlFromBody,
+      profilePic: profilePicFromBody,
       hiringPreferences,
       languagesKnown,
       isEmailVerified,
       isPhoneVerified,
       isGstVerified,
-      profilePic,
     } = req.body;
+
+
+
+
+    const missingFields = [];
+
+    // More robust validation that handles various edge cases
+    if (!designation || (typeof designation === 'string' && designation.trim() === '')) {
+      missingFields.push('designation');
+    }
+    if (!companyName || (typeof companyName === 'string' && companyName.trim() === '')) {
+      missingFields.push('companyName');
+    }
+    if (!industry || (typeof industry === 'string' && industry.trim() === '')) {
+      missingFields.push('industry');
+    }
+    if (!location || (typeof location === 'string' && location.trim() === '')) {
+      missingFields.push('location');
+    }
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        message: `Missing required fields: ${missingFields.join(', ')} are required`,
+        receivedData: {
+          designation: designation || null,
+          companyName: companyName || null,
+          industry: industry || null,
+          location: location || null
+        },
+        debug: {
+          designationExists: !!designation,
+          companyNameExists: !!companyName,
+          industryExists: !!industry,
+          locationExists: !!location,
+          bodyKeys: Object.keys(req.body || {})
+        }
+      });
+    }
+
+    // Parse and validate fields using utils
+    let parsedHiringPreferences, parsedLanguagesKnown;
+    try {
+      parsedHiringPreferences = parseJsonField(hiringPreferences);
+      parsedLanguagesKnown = parseJsonField(languagesKnown, true);
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    // Convert booleans
+    const emailVerified = parseBoolean(isEmailVerified);
+    const phoneVerified = parseBoolean(isPhoneVerified);
+    const gstVerified = parseBoolean(isGstVerified);
+
+    // Extract files
+    const { profilePic: extractedProfilePic, logoUrl: extractedLogoUrl } = extractProfileFiles(req.files);
+    let profilePic = extractedProfilePic || profilePicFromBody || null;
+    let logoUrl = extractedLogoUrl || logoUrlFromBody || null;
+
+
+
+    // Before saving, convert to JSON string if not null
+    const hiringPreferencesString = parsedHiringPreferences ? JSON.stringify(parsedHiringPreferences) : null;
+    const languagesKnownString = parsedLanguagesKnown ? JSON.stringify(parsedLanguagesKnown) : null;
 
     const profile = await CompanyRecruiterProfile.create({
       userId,
@@ -81,18 +120,26 @@ const createProfile = async (req, res) => {
       location,
       about,
       logoUrl,
-      hiringPreferences,
-      languagesKnown,
-      isEmailVerified,
-      isPhoneVerified,
-      isGstVerified,
+      hiringPreferences: hiringPreferencesString,
+      languagesKnown: languagesKnownString,
+      isEmailVerified: emailVerified,
+      isPhoneVerified: phoneVerified,
+      isGstVerified: gstVerified,
       profilePic,
     });
 
-    return res.status(201).json(profile);
+    return res.status(201).json({
+      message: 'Company recruiter profile created successfully',
+      profile: {
+        ...profile.toJSON(),
+        profilePicUrl: profile.profilePic,
+        // Remove the original profilePic key from the response
+        ...(profile.profilePic !== undefined ? { profilePic: undefined } : {})
+      }
+    });
   } catch (error) {
     console.error('Error creating recruiter profile:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
 
@@ -105,7 +152,11 @@ const getProfile = async (req, res) => {
       return res.status(404).json({ message: 'Profile not found' });
     }
 
-    return res.status(200).json(profile);
+    return res.status(200).json({
+      ...profile.toJSON(),
+      profilePicUrl: profile.profilePic,
+      ...(profile.profilePic !== undefined ? { profilePic: undefined } : {})
+    });
   } catch (error) {
     console.error('Error fetching recruiter profile:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -128,28 +179,91 @@ const updateProfile = async (req, res) => {
       industry,
       location,
       about,
-      logoUrl,
+      logoUrl: logoUrlFromBody,
+      profilePic: profilePicFromBody,
       hiringPreferences,
       languagesKnown,
       isEmailVerified,
       isPhoneVerified,
       isGstVerified,
-      profilePic,
     } = req.body;
+
+    // Parse hiringPreferences if it's a JSON string
+    let parsedHiringPreferences = profile.hiringPreferences; // Keep existing if no new value
+    if (hiringPreferences !== undefined) {
+      try {
+        parsedHiringPreferences = typeof hiringPreferences === 'string'
+          ? JSON.parse(hiringPreferences)
+          : hiringPreferences;
+      } catch (error) {
+        console.error('Error parsing hiringPreferences:', error);
+        return res.status(400).json({ message: 'Invalid hiringPreferences format. Must be valid JSON.' });
+      }
+    }
+
+    // Parse languagesKnown if it's a JSON string
+    let parsedLanguagesKnown = profile.languagesKnown; // Keep existing if no new value
+    if (languagesKnown !== undefined) {
+      try {
+        parsedLanguagesKnown = typeof languagesKnown === 'string'
+          ? JSON.parse(languagesKnown)
+          : languagesKnown;
+
+        // Ensure it's an array
+        if (!Array.isArray(parsedLanguagesKnown)) {
+          return res.status(400).json({ message: 'languagesKnown must be an array.' });
+        }
+      } catch (error) {
+        console.error('Error parsing languagesKnown:', error);
+        return res.status(400).json({ message: 'Invalid languagesKnown format. Must be valid JSON array.' });
+      }
+    }
+
+    // Convert boolean strings to actual booleans
+    const emailVerified = isEmailVerified !== undefined ? parseBoolean(isEmailVerified) : profile.isEmailVerified;
+    const phoneVerified = isPhoneVerified !== undefined ? parseBoolean(isPhoneVerified) : profile.isPhoneVerified;
+    const gstVerified = isGstVerified !== undefined ? parseBoolean(isGstVerified) : profile.isGstVerified;
+
+    // Extract files
+    const { profilePic: extractedProfilePic, logoUrl: extractedLogoUrl } = extractProfileFiles(req.files);
+    let profilePic = profile.profilePic; // Keep existing if no new file
+    let logoUrl = profile.logoUrl; // Keep existing if no new file
+
+    // If new values provided in body, use them (unless files are uploaded)
+    if (profilePicFromBody && (!req.files || !Array.isArray(req.files) || !req.files.some(f => f.fieldname === 'profilePic'))) {
+      profilePic = profilePicFromBody;
+    }
+    if (logoUrlFromBody && (!req.files || !Array.isArray(req.files) || !req.files.some(f => f.fieldname === 'logoUrl'))) {
+      logoUrl = logoUrlFromBody;
+    }
+
+    if (req.files && Array.isArray(req.files)) {
+      req.files.forEach(file => {
+        if (file.fieldname === 'profilePic') {
+          profilePic = file.path;
+        } else if (file.fieldname === 'logoUrl') {
+          logoUrl = file.path;
+        }
+      });
+    }
+
+    // In updateProfile, do the same before update
+    const hiringPreferencesStringUpdate = parsedHiringPreferences ? JSON.stringify(parsedHiringPreferences) : null;
+    const languagesKnownStringUpdate = parsedLanguagesKnown ? JSON.stringify(parsedLanguagesKnown) : null;
 
     // Update profile fields except recruiterName, recruiterEmail, recruiterPhone
     await profile.update({
-      designation,
-      companyName,
-      industry,
-      location,
-      about,
+      designation: designation || profile.designation,
+      companyName: companyName || profile.companyName,
+      industry: industry || profile.industry,
+      location: location || profile.location,
+      about: about !== undefined ? about : profile.about,
       logoUrl,
-      hiringPreferences,
-      languagesKnown,
-      isEmailVerified,
-      isPhoneVerified,
-      isGstVerified,
+      hiringPreferences: hiringPreferencesStringUpdate,
+      languagesKnown: languagesKnownStringUpdate,
+      isEmailVerified: emailVerified,
+      isPhoneVerified: phoneVerified,
+      isGstVerified: gstVerified,
       profilePic,
     });
 
@@ -162,15 +276,22 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    return res.status(200).json(profile);
+    return res.status(200).json({
+      message: 'Company recruiter profile updated successfully',
+      profile: {
+        ...profile.toJSON(),
+        profilePicUrl: profile.profilePic,
+        ...(profile.profilePic !== undefined ? { profilePic: undefined } : {})
+      }
+    });
   } catch (error) {
     console.error('Error updating recruiter profile:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
 
 //  New method to get detailed list of job posts by recruiter
- const getJobPostsByRecruiter = async (req, res) => {
+const getJobPostsByRecruiter = async (req, res) => {
   try {
     const userId = req.user?.id;
 
@@ -328,4 +449,6 @@ module.exports = {
   getJobPostsByRecruiter,
   incrementViewCount,
   updateExperienceStatus,
+  upload,
+  handleUploadError,
 };

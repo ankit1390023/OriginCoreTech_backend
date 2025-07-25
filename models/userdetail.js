@@ -1,12 +1,11 @@
 module.exports = (sequelize, DataTypes) => {
 
-
-  const UserDetail = sequelize.define("UserDetail", {
+const UserDetail = sequelize.define("UserDetail", {
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'Users',
+        model: 'users',
         key: 'id',
       },
       onDelete: 'CASCADE',
@@ -35,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    
+
     currentLocation: { type: DataTypes.STRING },
     gender: { type: DataTypes.STRING, allowNull: false },
 
@@ -65,7 +64,7 @@ module.exports = (sequelize, DataTypes) => {
     salaryDetails: DataTypes.STRING,
     currentlyLookingFor: DataTypes.STRING,
     workMode: DataTypes.STRING,
-    
+
     aboutus: {
       type: DataTypes.TEXT,
       allowNull: true,
@@ -102,7 +101,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-  });
+  }, { tableName: 'userdetails', });
 
   UserDetail.associate = function (models) {
     UserDetail.belongsTo(models.User, { foreignKey: 'userId', onDelete: 'CASCADE' });

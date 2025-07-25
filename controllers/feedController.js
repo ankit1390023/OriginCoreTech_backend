@@ -1,6 +1,7 @@
 const { User, UserDetail, CompanyRecruiterProfile, FeedPost } = require('../models');
 const { Follow } = require('../models');
-
+const { Op, fn, col, literal, Sequelize, where } = require('sequelize');
+const { PostLikes } = require('../models');
 // create feed
 const createFeedPost = async (req, res) => {
   try {
@@ -55,6 +56,12 @@ const getFeedPosts = async (req, res) => {
     limit = parseInt(limit) || 10;
     const offset = (page - 1) * limit;
 
+    // Get userId from JWT (set by authMiddleware)
+    const loggedInUserId = req.user && req.user.id;
+    if (!loggedInUserId) {
+      return res.status(401).json({ message: "Unauthorized: user not found in token" });
+    }
+
     const { count, rows: rawPosts } = await FeedPost.findAndCountAll({
       order: [['createdAt', 'DESC']],
       limit,
@@ -62,7 +69,7 @@ const getFeedPosts = async (req, res) => {
       include: [
         {
           model: User,
-          attributes: ['id', 'firstName', 'lastName'],
+          attributes: ['id', 'firstName', 'lastName', 'userRole'],
           include: [
             {
               model: UserDetail,
@@ -72,32 +79,87 @@ const getFeedPosts = async (req, res) => {
             {
               model: CompanyRecruiterProfile,
               as: 'CompanyRecruiterProfile',
-              attributes: ['logoUrl',]
+              attributes: ['logoUrl']
             }
           ]
         }
       ]
     });
 
-    // Parse comments and restructure user profilePic
-    const posts = rawPosts.map(post => {
+    const posts = await Promise.all(rawPosts.map(async post => {
       const postData = post.toJSON();
 
-      // Parse comments
-      postData.comments = postData.comments ? JSON.parse(postData.comments) : [];
-
-      // Dynamically attach user profilePic
+      // Attach user profilePic
       if (postData.User.userRole === 'COMPANY') {
         postData.User.profilePic = postData.User.CompanyRecruiterProfile?.logoUrl || null;
       } else {
         postData.User.profilePic = postData.User.UserDetail?.userprofilepic || null;
       }
 
-      // Optionally remove nested objects after extracting profilePic
+      // Remove nested models
       delete postData.User.UserDetail;
       delete postData.User.CompanyRecruiterProfile;
 
+      // Parse comments
+      postData.comments = postData.comments ? JSON.parse(postData.comments) : [];
+
+      // Collect commenter userIds for batch fetching
+      postData._commenterUserIds = postData.comments.map(c => parseInt(c.userId)).filter(Boolean);
+
+      // Get followers count
+      const followersCount = await Follow.count({
+        where: { followedId: postData.User.id }
+      });
+      postData.User.followersCount = followersCount;
+
+      // ✅ Check if logged-in user has liked this post
+      const liked = await PostLikes.findOne({
+        where: { postId: postData.id, userId: loggedInUserId }
+      });
+      postData.isLiked = !!liked;
+
       return postData;
+    }));
+
+    // Batch fetch all unique commenter userIds across all posts
+    const allCommenterUserIds = Array.from(new Set(posts.flatMap(p => p._commenterUserIds)));
+    let commenterUserMap = {};
+    if (allCommenterUserIds.length > 0) {
+      const commenters = await User.findAll({
+        where: { id: allCommenterUserIds },
+        attributes: ['id', 'firstName', 'lastName', 'userRole'],
+        include: [
+          { model: UserDetail, as: 'UserDetail', attributes: ['userprofilepic'] },
+          { model: CompanyRecruiterProfile, as: 'CompanyRecruiterProfile', attributes: ['logoUrl'] }
+        ]
+      });
+      commenterUserMap = Object.fromEntries(commenters.map(u => {
+        let profilePic = null;
+        if (u.userRole === 'COMPANY') {
+          profilePic = u.CompanyRecruiterProfile?.logoUrl || null;
+        } else {
+          profilePic = u.UserDetail?.userprofilepic || null;
+        }
+        return [u.id, {
+          firstName: u.firstName,
+          lastName: u.lastName,
+          profilePic
+        }];
+      }));
+    }
+
+    // Enrich comments with user info
+    posts.forEach(post => {
+      post.comments = post.comments.map(comment => {
+        const userInfo = commenterUserMap[parseInt(comment.userId)] || {};
+        return {
+          ...comment,
+          firstName: userInfo.firstName || null,
+          lastName: userInfo.lastName || null,
+          profilePic: userInfo.profilePic || null
+        };
+      });
+      delete post._commenterUserIds; // cleanup
     });
 
     return res.status(200).json({
@@ -111,7 +173,8 @@ const getFeedPosts = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
-// update if unlike after like
+
+
 const likeUnlikePost = async (req, res) => {
   try {
     const postId = req.params.id;
@@ -126,10 +189,18 @@ const likeUnlikePost = async (req, res) => {
       return res.status(404).json({ message: 'Post not found' });
     }
 
+    const existingLike = await PostLikes.findOne({ where: { postId, userId } });
+
     if (action === 'like') {
-      post.likeCount = (post.likeCount || 0) + 1;
+      if (!existingLike) {
+        await PostLikes.create({ postId, userId });
+        post.likeCount = (post.likeCount || 0) + 1;
+      }
     } else if (action === 'unlike') {
-      post.likeCount = Math.max((post.likeCount || 0) - 1, 0);
+      if (existingLike) {
+        await existingLike.destroy();
+        post.likeCount = Math.max((post.likeCount || 0) - 1, 0);
+      }
     } else {
       return res.status(400).json({ message: 'Invalid action. Use "like" or "unlike".' });
     }
@@ -137,11 +208,13 @@ const likeUnlikePost = async (req, res) => {
     await post.save();
 
     return res.status(200).json({ message: 'Post like status updated', likeCount: post.likeCount });
+
   } catch (error) {
     console.error('Error liking/unliking post:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 // comment post count
 const commentOnPost = async (req, res) => {
@@ -250,7 +323,7 @@ module.exports = {
   getFeedPosts,
   likeUnlikePost,
   commentOnPost,
- toggleFollowUser,
- getUserFollows
- 
+  toggleFollowUser,
+  getUserFollows
+
 };

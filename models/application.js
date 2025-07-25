@@ -67,7 +67,7 @@ const Application = sequelize.define('Application', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-   status: {
+  status: {
     type: DataTypes.STRING,
     allowNull: false,
   },

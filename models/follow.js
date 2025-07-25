@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: 'CASCADE'
     }
   }, {
+    tableName: 'follows',
     timestamps: true,
     indexes: [
       {
@@ -22,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
     ]
   });
 
-  Follow.associate = function(models) {
+  Follow.associate = function (models) {
     Follow.belongsTo(models.User, { foreignKey: 'followerId', as: 'Follower' });
     Follow.belongsTo(models.User, { foreignKey: 'followedId', as: 'Followed' });
   };

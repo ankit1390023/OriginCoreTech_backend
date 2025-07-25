@@ -5,9 +5,9 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 
 
-router.post('/detail', userDetailController.createUserDetails);
+router.post('/detail', authMiddleware, userDetailController.createUserDetails);
 router.get('/detail/:userId', userDetailController.getUserDetailsByUserId);
-router.put('/detail/:userId', userDetailController.updateUserDetailsByUserId);
+router.put('/detail/:userId', authMiddleware, userDetailController.updateUserDetailsByUserId);
 
 router.get('/public-profile/:userId', userDetailController.getPublicProfileByUserId);
 

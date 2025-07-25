@@ -36,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'pending', // e.g., pending, approved, rejected
     },
   }, {
+    tableName: 'experiences',
     timestamps: true,
   });
 

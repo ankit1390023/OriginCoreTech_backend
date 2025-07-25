@@ -10,19 +10,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'CompanyRecruiterProfiles',
+        model: 'companyrecruiterprofiles',
         key: 'id',
       },
       onDelete: 'CASCADE',
-    },
-    userId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'Users',
-        key: 'id',
-      },
-      onDelete: 'SET NULL',
     },
     opportunityType: DataTypes.STRING,
     jobProfile: DataTypes.STRING,
@@ -57,11 +48,12 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0,
       allowNull: false
     }
+  }, {
+    tableName: 'jobposts'
   });
 
   JobPost.associate = (models) => {
     JobPost.belongsTo(models.CompanyRecruiterProfile, { foreignKey: 'companyRecruiterProfileId' });
-    JobPost.belongsTo(models.User, { foreignKey: 'userId' });
     JobPost.hasMany(models.Application, { foreignKey: 'jobPostId' });
   };
 

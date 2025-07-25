@@ -15,7 +15,7 @@ const FeedPostModel = require('./feedPost');
 const FollowModel = require('./follow');
 const DomainModel = require('./domain');
 const SkillModel = require('./skill');
-
+const PostLikesModel=require('./postLikes');
 const User = UserModel(sequelize, DataTypes);
 const UserDetail = UserDetailModel(sequelize, DataTypes);
 const UniversityDetail = UniversityDetailModel(sequelize, DataTypes);
@@ -30,7 +30,7 @@ const Skill = SkillModel(sequelize, DataTypes);
 const ApplicationModel = Application;
 const Assignment = AssignmentModel(sequelize, DataTypes);
 const InterviewInvitation = InterviewInvitationModel;
-
+const PostLikes = PostLikesModel(sequelize, DataTypes);
 
   
 // Setup associations
@@ -46,7 +46,7 @@ if (InterviewInvitation.associate) InterviewInvitation.associate({ Application: 
 if (FeedPost.associate) FeedPost.associate({ User });
 if (Follow.associate) Follow.associate({ User });
 if (Skill.associate) Skill.associate({ Domain });
-
+if (PostLikes.associate) PostLikes.associate({ User });
 
 module.exports = {
   sequelize,
@@ -63,5 +63,6 @@ module.exports = {
   Skill,
   Application: ApplicationModel,
   Assignment,
-  InterviewInvitation
+  InterviewInvitation,
+  PostLikes
 };
