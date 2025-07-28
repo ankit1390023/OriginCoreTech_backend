@@ -40,8 +40,8 @@ const createProfile = async (req, res) => {
       logoUrl: logoUrlFromBody,
       profilePic: profilePicFromBody,
       hiringPreferences,
-      languagesKnown,
       isEmailVerified,
+      languagesKnown,
       isPhoneVerified,
       isGstVerified,
     } = req.body;
